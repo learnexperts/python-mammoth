@@ -60,13 +60,14 @@ def read_styles_xml_element(element):
 
     for style_element in element.find_children("w:style"):
         style = _read_style_element(style_element)
-        element_type = style_element.attributes["w:type"]
-        if element_type == "numbering":
-            numbering_styles[style.style_id] = _read_numbering_style_element(style_element)
-        else:
-            style_set = styles.get(element_type)
-            if style_set is not None:
-                style_set[style.style_id] = style
+        if style is not None:
+            element_type = style_element.attributes["w:type"]
+            if element_type == "numbering":
+                numbering_styles[style.style_id] = _read_numbering_style_element(style_element)
+            else:
+                style_set = styles.get(element_type)
+                if style_set is not None:
+                    style_set[style.style_id] = style
 
     return Styles(
         paragraph_styles=paragraph_styles,
@@ -80,9 +81,10 @@ Style = collections.namedtuple("Style", ["style_id", "name"])
 
 
 def _read_style_element(element):
-    style_id = element.attributes["w:styleId"]
-    name = element.find_child_or_null("w:name").attributes.get("w:val")
-    return Style(style_id=style_id, name=name)
+    style_id = element.attributes.get("w:styleId")
+    if style_id is not None:
+        name = element.find_child_or_null("w:name").attributes.get("w:val")
+        return Style(style_id=style_id, name=name)
 
 
 NumberingStyle = collections.namedtuple("NumberingStyle", ["num_id"])
