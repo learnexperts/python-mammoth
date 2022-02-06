@@ -161,7 +161,6 @@ class _DocumentConverter(documents.element_visitor(args=1)):
                     elif bullet_char == "f0b7":
                         type = "disc"
 
-            print( type )
             if type is not None:
                 for path_elem in reversed(html_path.elements):
                     if path_elem.tag.tag_name == paren_list_tag:
