@@ -35,6 +35,7 @@ class _AbstractNumLevel(object):
     paragraph_style_id = cobble.field()
     start_num = cobble.field()
     numbering_format = cobble.field()
+    level_text = cobble.field()
 
 
 def _read_abstract_num_levels(element):
@@ -51,13 +52,15 @@ def _read_abstract_num_level(element):
     is_ordered = num_fmt != "bullet"
     paragraph_style_id = element.find_child_or_null("w:pStyle").attributes.get("w:val")
     start_num = element.find_child_or_null("w:start").attributes.get("w:val")
+    lvl_txt = element.find_child_or_null("w:lvlText").attributes.get("w:val")
 
     return _AbstractNumLevel(
         level_index=level_index,
         is_ordered=is_ordered,
         paragraph_style_id=paragraph_style_id,
         start_num=start_num,
-        numbering_format=num_fmt 
+        numbering_format=num_fmt,
+        level_text=lvl_txt
     )
 
 

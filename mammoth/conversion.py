@@ -140,6 +140,7 @@ class _DocumentConverter(documents.element_visitor(args=1)):
                         break
         
             type = None
+            paren_list_tag = "ol"
             if paragraph.numbering.numbering_format == "lowerLetter":
                 type = "a"
             elif paragraph.numbering.numbering_format == "upperLetter":
@@ -148,10 +149,22 @@ class _DocumentConverter(documents.element_visitor(args=1)):
                 type = "i"
             elif paragraph.numbering.numbering_format == "upperRoman":
                 type = "I"
+            elif paragraph.numbering.numbering_format == "bullet":
+                paren_list_tag = "ul"
+                if paragraph.numbering.level_text == "o":
+                    type = "circle"
+                else:
+                    bullet_char = ":".join("{:02x}".format(
+                        ord(c)) for c in paragraph.numbering.level_text)
+                    if bullet_char == "f0a7":
+                        type = "square"
+                    elif bullet_char == "f0b7":
+                        type = "disc"
 
+            print( type )
             if type is not None:
                 for path_elem in reversed(html_path.elements):
-                    if path_elem.tag.tag_name == 'ol':
+                    if path_elem.tag.tag_name == paren_list_tag:
                         extra_attrs[id(path_elem)] = {"type":type}
                         break    
 
