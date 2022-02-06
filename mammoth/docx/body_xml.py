@@ -172,7 +172,8 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
             complex_field_stack.append(complex_fields.unknown)
             del current_instr_text[:]
         elif fld_char_type == "end":
-            complex_field_stack.pop()
+            if len(complex_field_stack) > 0:
+                complex_field_stack.pop()
         elif fld_char_type == "separate":
             instr_text = "".join(current_instr_text)
             hyperlink_kwargs = parse_hyperlink_field_code(instr_text)
