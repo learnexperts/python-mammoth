@@ -181,7 +181,8 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
                 complex_field = complex_fields.unknown
             else:
                 complex_field = complex_fields.hyperlink(hyperlink_kwargs)
-            complex_field_stack.pop()
+            if len(complex_field_stack) > 0:
+                complex_field_stack.pop()
             complex_field_stack.append(complex_field)
         return _empty_result
 
