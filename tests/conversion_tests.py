@@ -127,7 +127,8 @@ def bulleted_paragraphs_are_converted_using_matching_styles():
     result = convert_document_element_to_html(
         documents.paragraph(children=[
             _run_with_text("Hello")
-        ], numbering=_AbstractNumLevel(level_index=0, is_ordered=False, paragraph_style_id=None, start_num=None)),
+        ], numbering=_AbstractNumLevel(level_index=0, is_ordered=False, paragraph_style_id=None, start_num=None, numbering_format=None,
+        level_text=None)),
         style_map=[
             _style_mapping("p:unordered-list(1) => ul > li:fresh")
         ]

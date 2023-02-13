@@ -182,7 +182,7 @@ def simple_list_is_converted_to_list_elements():
     with open(test_path("simple-list.docx"), "rb") as fileobj:
         result = mammoth.convert_to_html(fileobj=fileobj)
         assert_equal([], result.messages)
-        assert_equal("<ul><li>Apple</li><li>Banana</li></ul>", result.value)
+        assert_equal("""<ul type="disc"><li data-li-order="1">Apple</li><li data-li-order="2">Banana</li></ul>""", result.value)
 
 
 @istest
@@ -335,9 +335,15 @@ def can_extract_raw_text():
 def ordered_lists_respect_the_start_number():
     with open(test_path("ordered-list-numbering.docx"), "rb") as fileobj:
         result = mammoth.convert_to_html(fileobj=fileobj)
-        assert_equal("<ol start=\"7\"><li>Seven</li><li>Eight</li><li>Nine</li><li>Ten</li><li>Eleven</li></ol><ol><li>One<ol start=\"5\"><li>EE</li><li>FF</li></ol></li><li>Two</li></ol>", result.value)
-      
-
+        assert_equal("""<ol><li data-li-order="7">Seven</li><li data-li-order="8">Eight</li><li data-li-order="9">Nine</li><li data-li-order="10">Ten</li><li data-li-order="11">Eleven</li><li data-li-order="1">One<ol type="a"><li data-li-order="5">EE</li><li data-li-order="6">FF</li></ol></li><li data-li-order="2">Two</li></ol>""", result.value)
+                     
+@istest
+def ordered_lists_are_continued_from_previous():
+    with open(test_path("ordered-nested-list-numbering.docx"), "rb") as fileobj:
+        result = mammoth.convert_to_html(fileobj=fileobj)
+        print(result.value)
+        assert_equal("""<ol><li data-li-order="1">One n1l0<ol type="a"><li data-li-order="1">One a n1l1</li><li data-li-order="2">One b n1l1</li><li data-li-order="3">One c n1l1</li></ol></li><li data-li-order="2">Two n1l0<ol type="a"><li data-li-order="1">Two a n1l1</li></ol></li></ol><p>Para 1</p><ul><li><ol type="a"><li data-li-order="2">Two b n1</li></ol></li></ul><ol><li data-li-order="3">Three n1l0<ol type="a"><li data-li-order="7">Two g n2</li><li data-li-order="8">Two h n2</li></ol></li></ol><p>Para 2</p><ol><li data-li-order="4">Four n1</li><li data-li-order="5">Five n1</li><li data-li-order="7">Seven -4 n1</li></ol>""", result.value)
+    
 def _copy_of_test_data(path):
     destination = io.BytesIO()
     with open(test_path(path), "rb") as source:

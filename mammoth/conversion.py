@@ -122,6 +122,17 @@ class _DocumentConverter(documents.element_visitor(args=1)):
             if paragraph.list_id is not None: 
                 # Keep track of the order for lists that continue from annothe lists
                 list_key = ( paragraph.list_id, paragraph.numbering.level_index)
+
+                # List counters are only valid for list items under the same parent.
+                # When the parent changes, reset all counters for nested li's
+
+                para_level_index =  int(paragraph.numbering.level_index)
+                for li_counter_key in list(self._li_counters.keys()):
+                    lic_list_id, lic_level_index = li_counter_key
+                    lic_level_index = int(lic_level_index)
+
+                    if lic_list_id == paragraph.list_id and lic_level_index > para_level_index:
+                        del self._li_counters[li_counter_key]
  
                 if self._li_counters.get( list_key ) is None:                 
                     if paragraph.numbering.start_num is not None and paragraph.numbering.start_num != '1':
