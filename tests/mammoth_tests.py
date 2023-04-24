@@ -349,6 +349,12 @@ def paragraphs_are_aligned():
         result = mammoth.convert_to_html(fileobj=fileobj)
         assert_equal("""<p>Left</p><p data-alignment="center">Middle</p><p data-alignment="right">Right</p>""", result.value)
 
+@istest
+def paragraphs_have_style_names():
+    with open(test_path("style_names.docx"), "rb") as fileobj:
+        result = mammoth.convert_to_html(fileobj=fileobj)
+        assert_equal("""<p>Normal</p><p data-style-name="No Spacing">No Spacing</p><p data-style-name="Quote">Quote</p><p data-style-name="Intense Quote">Intense Quote</p>""", result.value)
+
 def _copy_of_test_data(path):
     destination = io.BytesIO()
     with open(test_path(path), "rb") as source:

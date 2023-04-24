@@ -388,7 +388,10 @@ class _DocumentConverter(documents.element_visitor(args=1)):
         attrs = {}
         if paragraph.alignment is not None:
             attrs["data-alignment"] = paragraph.alignment
-        
+  
+        if paragraph.style_name is not None:
+            attrs["data-style-name"] = paragraph.style_name
+
         default = html_paths.path([html_paths.element("p", attributes=attrs, fresh=True)])
         return self._find_html_path(paragraph, "paragraph", default, warn_unrecognised=True)
 
