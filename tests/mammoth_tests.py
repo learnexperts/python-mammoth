@@ -341,9 +341,14 @@ def ordered_lists_respect_the_start_number():
 def ordered_lists_are_continued_from_previous():
     with open(test_path("ordered-nested-list-numbering.docx"), "rb") as fileobj:
         result = mammoth.convert_to_html(fileobj=fileobj)
-        print(result.value)
-        assert_equal("""<ol><li data-li-order="1">One n1l0<ol type="a"><li data-li-order="1">One a n1l1</li><li data-li-order="2">One b n1l1</li><li data-li-order="3">One c n1l1</li></ol></li><li data-li-order="2">Two n1l0<ol type="a"><li data-li-order="1">Two a n1l1</li></ol></li></ol><p>Para 1</p><ul><li><ol type="a"><li data-li-order="2">Two b n1</li></ol></li></ul><ol><li data-li-order="3">Three n1l0<ol type="a"><li data-li-order="7">Two g n2</li><li data-li-order="8">Two h n2</li></ol></li></ol><p>Para 2</p><ol><li data-li-order="4">Four n1</li><li data-li-order="5">Five n1</li><li data-li-order="7">Seven -4 n1</li></ol>""", result.value)
-    
+        assert_equal("""<ol><li data-li-order="1">One <ol type="a"><li data-li-order="1">One a </li><li data-li-order="2">One b </li><li data-li-order="3">One c </li></ol></li><li data-li-order="2">Two <ol type="a"><li data-li-order="1">Two a</li></ol></li></ol><p>Para 1</p><ul><li><ol type="a"><li data-li-order="2">Two b</li></ol></li></ul><ol><li data-li-order="3">Three<ol type="a"><li data-li-order="7">Three g</li><li data-li-order="8">Three h </li></ol></li></ol><p>Para 2</p><ol><li data-li-order="4">Four </li><li data-li-order="5">Five </li><li data-li-order="7">Seven</li></ol>""", result.value)
+
+@istest
+def paragraphs_are_aligned():
+    with open(test_path("alignment.docx"), "rb") as fileobj:
+        result = mammoth.convert_to_html(fileobj=fileobj)
+        assert_equal("""<p>Left</p><p data-alignment="center">Middle</p><p data-alignment="right">Right</p>""", result.value)
+
 def _copy_of_test_data(path):
     destination = io.BytesIO()
     with open(test_path(path), "rb") as source:

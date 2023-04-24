@@ -385,7 +385,11 @@ class _DocumentConverter(documents.element_visitor(args=1)):
 
 
     def _find_html_path_for_paragraph(self, paragraph):
-        default = html_paths.path([html_paths.element("p", fresh=True)])
+        attrs = {}
+        if paragraph.alignment is not None:
+            attrs["data-alignment"] = paragraph.alignment
+        
+        default = html_paths.path([html_paths.element("p", attributes=attrs, fresh=True)])
         return self._find_html_path(paragraph, "paragraph", default, warn_unrecognised=True)
 
     def _find_html_path_for_run(self, run):

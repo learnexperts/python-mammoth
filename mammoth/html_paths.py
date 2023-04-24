@@ -7,15 +7,16 @@ def path(elements):
     return HtmlPath(elements)
 
 
-def element(names, class_names=None, fresh=None, separator=None):
+def element(names, class_names=None, fresh=None, separator=None, attributes=None):
     if class_names is None:
         class_names = []
     if fresh is None:
         fresh = False
+    if attributes is None:
+         attributes = {}
     if class_names:
-        attributes = {"class": " ".join(class_names)}
-    else:
-        attributes = {}
+        attributes["class"] = "".join(class_names)
+
     return HtmlPathElement(html.tag(
         tag_names=names,
         attributes=attributes,
