@@ -252,6 +252,16 @@ def all_caps_runs_can_be_mapped_using_style_mapping():
 
 
 @istest
+def highlight_runs_are_wrapped_in_span_tags():
+    result = convert_document_element_to_html(
+        documents.run(
+            children=[documents.text("Hello")],
+            highlight_color="red",
+        ),
+    )
+    assert_equal("<span style=\"background-color:red\">Hello</span>", result.value)
+
+@istest
 def small_caps_runs_are_ignored_by_default():
     result = convert_document_element_to_html(
         documents.run(children=[documents.text("Hello")], is_small_caps=True),

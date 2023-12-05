@@ -381,6 +381,12 @@ class RunTests(object):
         assert_equal(14, run.font_size)
 
     @istest
+    def run_has_highlight_color_read_from_properties(self):
+        highlight_color_xml = xml_element("w:highlight", {"w:val": "green"})
+        run = self._read_run_with_properties([highlight_color_xml])
+        assert_equal("green", run.highlight_color)
+
+    @istest
     def run_with_invalid_w_sz_has_none_font_size(self):
         font_size_xml = xml_element("w:sz", {"w:val": "28a"})
         run = self._read_run_with_properties([font_size_xml])
