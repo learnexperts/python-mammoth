@@ -161,6 +161,26 @@ class VerticalAlignment(object):
     superscript = "superscript"
     subscript = "subscript"
 
+# map word highlight color names to css
+highlight_color_map = {
+    "black":  "black",
+    "blue":  "blue",
+    "green":  "lime",
+    "darkBlue":  "navy",
+    "darkRed":  "maroon",
+    "darkYellow":  "olive",
+    "lightGray":  "silver",
+    "darkGray":  "gray",
+    "darkGreen":  "green",
+    "magenta":  "magenta",
+    "red":  "red",
+    "darkCyan":  "teal",
+    "cyan":  "cyan",
+    "darkMagenta":  "purple",
+    "white":  "white",
+    "yellow":  "yellow",
+}
+
 text = Text
 
 _tab = Tab()
