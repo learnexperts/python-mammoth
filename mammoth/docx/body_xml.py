@@ -82,6 +82,7 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
             .find_child_or_null("w:vertAlign") \
             .attributes.get("w:val")
         font = properties.find_child_or_null("w:rFonts").attributes.get("w:ascii")
+        highlight_color = properties.find_child_or_null("w:highlight").attributes.get("w:val")
 
         font_size_string = properties.find_child_or_null("w:sz").attributes.get("w:val")
         if _is_int(font_size_string):
@@ -120,6 +121,7 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
                 vertical_alignment=vertical_alignment,
                 font=font,
                 font_size=font_size,
+                highlight_color=highlight_color
             ))
 
     def _read_run_style(properties):
