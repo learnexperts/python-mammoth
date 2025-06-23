@@ -105,6 +105,7 @@ class Image(Element):
     content_type = cobble.field()
     open = cobble.field()
     size = cobble.field(default=None)
+    attributes = cobble.field(default=None)
 
 
 def document(children, notes=None, comments=None):

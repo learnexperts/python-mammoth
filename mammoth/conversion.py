@@ -77,7 +77,17 @@ class _DocumentConverter(documents.element_visitor(args=1)):
 
     def visit_image(self, image, context):
         try:
-            return self._convert_image(image)
+            print("visit_image — _has_border?", getattr(image, "_has_border", False))
+            result = self._convert_image(image)
+
+            attrs = image.attributes or {}
+            if (image.attributes or {}).get("_has_border"):
+                for node in result:
+                    if isinstance(node, html.Element):
+                        current_class = node.attributes.get("class", "")
+                        node.attributes["class"] = (current_class + " fr-bordered").strip()
+                        print("visit_image — fr-bordered class injected")
+            return result
         except InvalidFileReferenceError as error:
             self._messages.append(results.warning(str(error)))
             return []
