@@ -2,6 +2,8 @@ import contextlib
 import re
 import sys
 
+from mammoth import results
+
 from .. import documents
 from .. import results
 from .. import lists
@@ -439,7 +441,6 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
         else:
             alt_text = properties.get("title")
         dimensions = element.find_child_or_null("wp:extent").attributes
-   
         if dimensions.get("cx") is not None:
             size = documents.Size(
                 width=str(_emu_to_pixel(dimensions.get("cx"))),
@@ -453,18 +454,41 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
             .find_children("pic:pic") \
             .find_children("pic:blipFill") \
             .find_children("a:blip")
-        return _read_blips(blips, alt_text, size)
+
+        shape_props = element.find_child("a:graphic") \
+            .find_child("a:graphicData") \
+            .find_child("pic:pic") \
+            .find_child_or_null("pic:spPr")
+
+        has_border = (
+            shape_props is not None and
+            any(getattr(child, "name", None) == "a:ln" for child in shape_props.children)
+        )
+
+        print("has_border detected:", has_border)
+
+        if has_border:
+            for blip in blips:
+                blip.attributes["_has_border"] = True
+                    
+        return _read_blips(blips, alt_text, size, has_border)
 
     def _emu_to_pixel(emu):
         return int(round(float(emu) / EMU_PER_PIXEL))
 
-    def _read_blips(blips, alt_text, size):
-        return _ReadResult.concat(lists.map(lambda blip: _read_blip(blip, alt_text, size), blips))
+    def _read_blips(blips, alt_text, size, has_border):
+        print(f"_read_blips — has_border passed in: {has_border}")
+        return _ReadResult.concat(lists.map(
+            lambda blip: _read_blip(blip, alt_text, size, has_border),
+            blips
+        ))
 
-    def _read_blip(element, alt_text, size):
-        return _read_image(lambda: _find_blip_image(element), alt_text, size)
+    def _read_blip(element, alt_text, size, has_border):
+        print(f"_read_blip — has_border passed in: {has_border}")
+        return _read_image(lambda: _find_blip_image(element), alt_text, size, has_border)
 
-    def _read_image(find_image, alt_text, size=None):
+    def _read_image(find_image, alt_text, size=None, has_border=False):
+        print(f"_read_image — received has_border: {has_border}")
         find_result = find_image()
         
         if find_result is None:
@@ -474,6 +498,14 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
             image_path, open_image = find_result    
             content_type = content_types.find_content_type(image_path)
             image = documents.image(alt_text=alt_text, content_type=content_type, size=size, open=open_image)
+            if image.attributes is None:
+                image.attributes = {}
+            
+            if has_border:
+                print("_read_image — setting fr-bordered")
+                image.attributes["class"] = "fr-bordered"
+                image.attributes["_has_border"] = True 
+                setattr(image, "_has_border", True)
 
             if content_type in ["image/png", "image/gif", "image/jpeg", "image/svg+xml", "image/tiff"]:
                 messages = []
@@ -542,10 +574,28 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
         if relationship_id is None:
             warning = results.warning("A v:imagedata element without a relationship ID was ignored")
             return _empty_result_with_message(warning)
+        
+        title = element.attributes.get("o:title")
+        attrs = dict(element.attributes or {})
+        if getattr(element, "_has_border", False) or attrs.get("_has_border"):
+            print("fr-bordered applied")
+            attrs["class"] = "fr-bordered"
+            attrs["_has_border"] = True
         else:
-            title = element.attributes.get("o:title")
-            return _read_image(lambda: _find_embedded_image(relationship_id), title, style)
+            print("has_border NOT set")
 
+        image = documents.Image(
+            alt_text=title,
+            content_type="image/png",
+            open=None,
+            size=style,
+            attributes=attrs
+        )
+        
+        if attrs.get("_has_border"):
+            setattr(image, "_has_border", True)
+            
+        return image
     def note_reference_reader(note_type):
         def note_reference(element):
             return _success(documents.note_reference(note_type, element.attributes["w:id"]))

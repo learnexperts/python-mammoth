@@ -105,6 +105,7 @@ class Image(Element):
     content_type = cobble.field()
     open = cobble.field()
     size = cobble.field(default=None)
+    attributes = cobble.field(default=None)
 
 
 def document(children, notes=None, comments=None):
@@ -160,6 +161,26 @@ class VerticalAlignment(object):
     baseline = "baseline"
     superscript = "superscript"
     subscript = "subscript"
+
+# map word highlight color names to css
+highlight_color_map = {
+    "black":  "black",
+    "blue":  "blue",
+    "green":  "lime",
+    "darkBlue":  "navy",
+    "darkRed":  "maroon",
+    "darkYellow":  "olive",
+    "lightGray":  "silver",
+    "darkGray":  "gray",
+    "darkGreen":  "green",
+    "magenta":  "magenta",
+    "red":  "red",
+    "darkCyan":  "teal",
+    "cyan":  "cyan",
+    "darkMagenta":  "purple",
+    "white":  "white",
+    "yellow":  "yellow",
+}
 
 text = Text
 

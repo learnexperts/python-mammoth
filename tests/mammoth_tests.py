@@ -360,3 +360,10 @@ def _copy_of_test_data(path):
     with open(test_path(path), "rb") as source:
         shutil.copyfileobj(source, destination)
     return destination
+
+@istest
+def image_borders_are_preserved():
+    with open(test_path("image-borders.docx"), "rb") as fileobj:
+        result = mammoth.convert_to_html(fileobj=fileobj)
+        html = result.value
+        assert "class=\"fr-bordered\"" in html
