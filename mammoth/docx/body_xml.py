@@ -596,14 +596,6 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
             setattr(image, "_has_border", True)
             
         return image
-    
-    def _has_border(element):
-        style = element.attributes.get("style", "")
-        has_border = "black 1pt solid" in style or "black 1px solid" in style
-        if has_border:
-            element.attributes["_has_border"] = True
-        return has_border
-
     def note_reference_reader(note_type):
         def note_reference(element):
             return _success(documents.note_reference(note_type, element.attributes["w:id"]))
