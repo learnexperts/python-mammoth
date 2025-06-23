@@ -256,10 +256,10 @@ def highlight_runs_are_wrapped_in_span_tags():
     result = convert_document_element_to_html(
         documents.run(
             children=[documents.text("Hello")],
-            highlight_color="red",
+            highlight_color="green",
         ),
     )
-    assert_equal("<span style=\"background-color:red\">Hello</span>", result.value)
+    assert_equal("<span style=\"background-color:lime\">Hello</span>", result.value)
 
 @istest
 def small_caps_runs_are_ignored_by_default():

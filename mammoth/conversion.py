@@ -209,7 +209,8 @@ class _DocumentConverter(documents.element_visitor(args=1)):
         if run.is_bold:
             paths.append(self._find_style_for_run_property("bold", default="strong"))
         if run.highlight_color is not None:
-            paths.append(html_paths.element(["span"], attributes={"style":f"background-color:{run.highlight_color}"}, fresh=False))
+            color = documents.highlight_color_map.get(run.highlight_color, run.highlight_color)
+            paths.append(html_paths.element(["span"], attributes={"style":f"background-color:{color}"}, fresh=False))
         paths.append(self._find_html_path_for_run(run))
 
         for path in paths:
