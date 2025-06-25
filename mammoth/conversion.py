@@ -85,8 +85,9 @@ class _DocumentConverter(documents.element_visitor(args=1)):
                 for node in result:
                     if isinstance(node, html.Element):
                         current_class = node.attributes.get("class", "")
-                        node.attributes["class"] = (current_class + " fr-bordered").strip()
-                        print("visit_image — fr-bordered class injected")
+                        if "fr-bordered" not in current_class.split():
+                            node.attributes["class"] = (current_class + " fr-bordered").strip()
+                            print("visit_image — fr-bordered class injected")
             return result
         except InvalidFileReferenceError as error:
             self._messages.append(results.warning(str(error)))
