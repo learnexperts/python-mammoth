@@ -367,3 +367,11 @@ def image_borders_are_preserved():
         result = mammoth.convert_to_html(fileobj=fileobj)
         html = result.value
         assert "class=\"fr-bordered\"" in html
+        
+@istest
+def font_colors_are_preserved():
+    with open(test_path("font-colors.docx"), "rb") as fileobj:
+        result = mammoth.convert_to_html(fileobj=fileobj)
+        html = result.value
+        print("\nHTML Output:\n", html)
+        assert 'style="color: #' in html

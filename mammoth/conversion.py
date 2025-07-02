@@ -212,6 +212,8 @@ class _DocumentConverter(documents.element_visitor(args=1)):
         if run.highlight_color is not None:
             color = documents.highlight_color_map.get(run.highlight_color, run.highlight_color)
             paths.append(html_paths.element(["span"], attributes={"style":f"background-color:{color}"}, fresh=False))
+        if run.font_color is not None:
+            paths.append(html_paths.element(["span"], attributes={"style": f"color: #{run.font_color}"}, fresh=False))
         paths.append(self._find_html_path_for_run(run))
 
         for path in paths:
