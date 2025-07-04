@@ -5,13 +5,7 @@ from . import html
 
 def img_element(func):
     def convert_image(image):
-        attributes = func(image).copy()       
-        if getattr(image, "_has_border", False) or (image.attributes and image.attributes.get("_has_border")):
-            print("convert_image: _has_border detected")
-            existing_class = attributes.get("class", "")
-            attributes["class"] = (existing_class + " fr-bordered").strip()            
-        attributes.pop("_has_border", None)
-                
+        attributes = {**(image.attributes or {}), **func(image).copy()}                     
         if image.alt_text:
             attributes["alt"] = image.alt_text
         if image.size:

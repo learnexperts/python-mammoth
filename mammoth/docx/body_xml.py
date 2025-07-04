@@ -466,10 +466,6 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
         )
 
         print("has_border detected:", has_border)
-
-        if has_border:
-            for blip in blips:
-                blip.attributes["_has_border"] = True
                     
         return _read_blips(blips, alt_text, size, has_border)
 
@@ -477,14 +473,13 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
         return int(round(float(emu) / EMU_PER_PIXEL))
 
     def _read_blips(blips, alt_text, size, has_border):
-        print(f"_read_blips — has_border passed in: {has_border}")
         return _ReadResult.concat(lists.map(
             lambda blip: _read_blip(blip, alt_text, size, has_border),
             blips
         ))
 
     def _read_blip(element, alt_text, size, has_border):
-        print(f"_read_blip — has_border passed in: {has_border}")
+        print(f"_read_blip — has_border from element attributes: {has_border}")
         return _read_image(lambda: _find_blip_image(element), alt_text, size, has_border)
 
     def _read_image(find_image, alt_text, size=None, has_border=False):
@@ -504,8 +499,6 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
             if has_border:
                 print("_read_image — setting fr-bordered")
                 image.attributes["class"] = "fr-bordered"
-                image.attributes["_has_border"] = True 
-                setattr(image, "_has_border", True)
 
             if content_type in ["image/png", "image/gif", "image/jpeg", "image/svg+xml", "image/tiff"]:
                 messages = []
@@ -577,12 +570,6 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
         
         title = element.attributes.get("o:title")
         attrs = dict(element.attributes or {})
-        if getattr(element, "_has_border", False) or attrs.get("_has_border"):
-            print("fr-bordered applied")
-            attrs["class"] = "fr-bordered"
-            attrs["_has_border"] = True
-        else:
-            print("has_border NOT set")
 
         image = documents.Image(
             alt_text=title,
@@ -591,9 +578,8 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
             size=style,
             attributes=attrs
         )
-        
-        if attrs.get("_has_border"):
-            setattr(image, "_has_border", True)
+            
+        print("read_imagedata: returning image with _has_border?", image.attributes and image.attributes.get("_has_border"))
             
         return image
     def note_reference_reader(note_type):
