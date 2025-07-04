@@ -464,8 +464,6 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
             shape_props is not None and
             any(getattr(child, "name", None) == "a:ln" for child in shape_props.children)
         )
-
-        print("has_border detected:", has_border)
                     
         return _read_blips(blips, alt_text, size, has_border)
 
@@ -479,11 +477,9 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
         ))
 
     def _read_blip(element, alt_text, size, has_border):
-        print(f"_read_blip — has_border from element attributes: {has_border}")
         return _read_image(lambda: _find_blip_image(element), alt_text, size, has_border)
 
     def _read_image(find_image, alt_text, size=None, has_border=False):
-        print(f"_read_image — received has_border: {has_border}")
         find_result = find_image()
         
         if find_result is None:
@@ -497,7 +493,6 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
                 image.attributes = {}
             
             if has_border:
-                print("_read_image — setting fr-bordered")
                 image.attributes["class"] = "fr-bordered"
 
             if content_type in ["image/png", "image/gif", "image/jpeg", "image/svg+xml", "image/tiff"]:
@@ -578,8 +573,6 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
             size=style,
             attributes=attrs
         )
-            
-        print("read_imagedata: returning image with _has_border?", image.attributes and image.attributes.get("_has_border"))
             
         return image
     def note_reference_reader(note_type):

@@ -366,6 +366,19 @@ def image_borders_are_preserved():
     with open(test_path("image-borders.docx"), "rb") as fileobj:
         result = mammoth.convert_to_html(fileobj=fileobj)
         html = result.value
+        
+        # Count bordered images
         bordered_count = html.count('class="fr-bordered"')
-        print("Bordered image count:", bordered_count)
-        print(html)
+        
+        # Verify that bordered images have the correct class
+        assert bordered_count > 0, "Should have at least one bordered image"
+        
+        # Count total images
+        total_images = html.count('<img')
+        
+        # Verify that some images don't have borders (non-bordered images)
+        non_bordered_count = total_images - bordered_count
+        assert non_bordered_count > 0, "Should have at least one non-bordered image"
+        
+        # Verify that non-bordered images don't have the fr-bordered class
+        assert html.count('class="fr-bordered"') == bordered_count, "Only bordered images should have fr-bordered class"
