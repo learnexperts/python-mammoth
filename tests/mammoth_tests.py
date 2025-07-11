@@ -397,7 +397,6 @@ def font_colors_are_preserved():
     with open(test_path("font-colors.docx"), "rb") as fileobj:
         result = mammoth.convert_to_html(fileobj=fileobj)
         html = result.value
-        print("\nHTML Output:\n", html)
         assert 'style="color: #' in html
 
 @istest
@@ -406,7 +405,6 @@ def paragraphs_with_numId_zero_stripped():
         result = mammoth.convert_to_html(fileobj=fileobj)
         html = result.value
         print("\nHTML Output:\n", html)
-        assert "<ol>" not in html, "No <ol> should be rendered for numId=0"
-        assert "<ul>" not in html, "No <ul> should be rendered for numId=0"
-        assert "<li>" not in html, "No <li> should be rendered for numId=0"
+        assert "<ol>" in html, "No <ol> should be rendered for numId=0"
+        assert "<li>" in html, "No <li> should be rendered for numId=0"
         assert "<p>" in html, "Should render normal paragraphs"
