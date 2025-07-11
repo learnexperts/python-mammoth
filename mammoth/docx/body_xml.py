@@ -85,6 +85,8 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
             .attributes.get("w:val")
         font = properties.find_child_or_null("w:rFonts").attributes.get("w:ascii")
         highlight_color = properties.find_child_or_null("w:highlight").attributes.get("w:val")
+        font_color = properties.find_child_or_null("w:color").attributes.get("w:val")
+
 
         font_size_string = properties.find_child_or_null("w:sz").attributes.get("w:val")
         if _is_int(font_size_string):
@@ -123,7 +125,8 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
                 vertical_alignment=vertical_alignment,
                 font=font,
                 font_size=font_size,
-                highlight_color=highlight_color
+                highlight_color=highlight_color,
+                font_color=font_color,
             ))
 
     def _read_run_style(properties):
@@ -227,17 +230,25 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
         return results.warning("{0} style with ID {1} was referenced but not defined in the document".format(style_type, style_id))
 
     def _read_numbering_properties(paragraph_style_id, element):
+        num_id_element = element.find_child_or_null("w:numId")
+        ilvl_element = element.find_child_or_null("w:ilvl")
+        
+        if num_id_element is not None:
+            num_id = num_id_element.attributes.get("w:val")
+            if num_id == "0":
+                return None 
+        else:
+            num_id = None
+
         if paragraph_style_id is not None:
             level = numbering.find_level_by_paragraph_style_id(paragraph_style_id)
             if level is not None:
                 return level
-
-        num_id = element.find_child_or_null("w:numId").attributes.get("w:val")
-        level_index = element.find_child_or_null("w:ilvl").attributes.get("w:val")
-        if num_id is None or level_index is None:
+        if num_id is None or ilvl_element is None:
             return None
-        else:
-            return numbering.find_level(num_id, level_index)
+
+        ilvl = ilvl_element.attributes.get("w:val")
+        return numbering.find_level(num_id, ilvl)
 
     def _read_order_list_id( element):
         return element.find_child_or_null("w:numId").attributes.get("w:val")

@@ -389,4 +389,24 @@ def image_borders_are_preserved():
         assert non_bordered_count > 0, "Should have at least one non-bordered image"
         
         # Verify that non-bordered images don't have the fr-bordered class
+        assert html.count('class="fr-bordered"') == bordered_count, "Only bordered images should have fr-bordered class"
         assert "class=\"fr-bordered\"" in html
+        
+@istest
+def font_colors_are_preserved():
+    with open(test_path("font-colors.docx"), "rb") as fileobj:
+        result = mammoth.convert_to_html(fileobj=fileobj)
+        html = result.value
+        print("\nHTML Output:\n", html)
+        assert 'style="color: #' in html
+
+@istest
+def paragraphs_with_numId_zero_stripped():
+    with open(test_path("num-Id-numbered-list.docx"), "rb") as fileobj:
+        result = mammoth.convert_to_html(fileobj=fileobj)
+        html = result.value
+        print("\nHTML Output:\n", html)
+        assert "<ol>" not in html, "No <ol> should be rendered for numId=0"
+        assert "<ul>" not in html, "No <ul> should be rendered for numId=0"
+        assert "<li>" not in html, "No <li> should be rendered for numId=0"
+        assert "<p>" in html, "Should render normal paragraphs"
