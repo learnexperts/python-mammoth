@@ -459,19 +459,17 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
         else:
             size = None
 
-        blips = element.find_children("a:graphic") \
-            .find_children("a:graphicData") \
-            .find_children("pic:pic") \
-            .find_children("pic:blipFill") \
-            .find_children("a:blip")
+        graphic = element.find_child("a:graphic")
+        graphic_data = graphic.find_child("a:graphicData") if graphic else None
+        pic = graphic_data.find_child("pic:pic") if graphic_data else None
+        blip_fill = pic.find_child("pic:blipFill") if pic else None
+        blips = blip_fill.find_children("a:blip") if blip_fill else []
 
-        shape_props = element.find_child("a:graphic") \
-            .find_child("a:graphicData") \
-            .find_child("pic:pic") \
-            .find_child_or_null("pic:spPr")
+        shape_props = pic.find_child_or_null("pic:spPr") if pic else None
 
         has_border = (
             shape_props is not None and
+            hasattr(shape_props, "children") and
             any(getattr(child, "name", None) == "a:ln" for child in shape_props.children)
         )
                     
@@ -575,16 +573,18 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
         
         title = element.attributes.get("o:title")
         attrs = dict(element.attributes or {})
-
+        
+        image_path, open_image = _find_embedded_image(relationship_id)
+        
         image = documents.Image(
             alt_text=title,
             content_type="image/png",
-            open=None,
+            open=open_image,
             size=style,
             attributes=attrs
         )
             
-        return image
+        return _success([image])
     def note_reference_reader(note_type):
         def note_reference(element):
             return _success(documents.note_reference(note_type, element.attributes["w:id"]))
