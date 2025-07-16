@@ -233,21 +233,20 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
         num_id_element = element.find_child_or_null("w:numId")
         ilvl_element = element.find_child_or_null("w:ilvl")
         
-        if num_id_element is not None:
-            num_id = num_id_element.attributes.get("w:val")
-            if num_id == "0":
-                return None 
-        else:
-            num_id = None
+        num_id = num_id_element.attributes.get("w:val") if num_id_element else None
+        ilvl = ilvl_element.attributes.get("w:val") if ilvl_element else None
+
+        if num_id == "0":
+            return None
 
         if paragraph_style_id is not None:
             level = numbering.find_level_by_paragraph_style_id(paragraph_style_id)
             if level is not None:
                 return level
-        if num_id is None or ilvl_element is None:
+
+        if num_id is None or ilvl is None:
             return None
 
-        ilvl = ilvl_element.attributes.get("w:val")
         return numbering.find_level(num_id, ilvl)
 
     def _read_order_list_id( element):
