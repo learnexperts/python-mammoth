@@ -689,6 +689,45 @@ For instance, to ignore any paragraph with the style `Comment`:
 p[style-name='Comment'] => !
 ```
 
+## Development
+
+### Deploying a Release
+
+To deploy a new release version to git:
+
+1. **Update the version number** in `setup.py`:
+   ```python
+   version='1.4.19',  # Change from current version to new version
+   ```
+
+2. **Add release notes** to the `NEWS` file at the top:
+   ```
+   # 1.4.19
+   
+   * Your release notes here
+   * Another change
+   ```
+
+3. **Commit your changes**:
+   ```bash
+   git add setup.py NEWS
+   git commit -m "Bump version to 1.4.18.13"
+   ```
+
+4. **Create and push a git tag**:
+   ```bash
+   git tag -a v1.4.19 -m "Release version 1.4.18.13"
+   git push origin main
+   git push origin v1.4.19
+   ```
+
+
+After tagging, users can install the specific version with Poetry:
+```toml
+[tool.poetry.dependencies]
+mammoth = { git = "https://github.com/gsmedley/python-mammoth.git", tag = "v1.4.19" }
+```
+
 ## Donations
 
 If you'd like to say thanks, feel free to [make a donation through Ko-fi](https://ko-fi.com/S6S01MG20).
