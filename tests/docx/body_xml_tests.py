@@ -451,10 +451,12 @@ class ComplexFieldTests(object):
     def _is_empty_hyperlinked_run(self):
         return self._is_hyperlinked_run(children=[])
 
-    def test_runs_in_a_complex_field_for_hyperlinks_without_switch_are_read_as_external_hyperlinks(self):
+    def test_runs_in_a_complex_field_for_hyperlinks_without_switch_with_quoted_location_are_read_as_external_hyperlinks(self):
         element = xml_element("w:p", {}, [
             self._BEGIN_COMPLEX_FIELD,
-            self._HYPERLINK_INSTRTEXT,
+            xml_element("w:instrText", {}, [
+                xml_text(' HYPERLINK "http://example.com"')
+            ]),
             self._SEPARATE_COMPLEX_FIELD,
             _run_element_with_text("this is a hyperlink"),
             self._END_COMPLEX_FIELD,
@@ -473,11 +475,59 @@ class ComplexFieldTests(object):
             is_empty_run,
         )))
 
-    def test_runs_in_a_complex_field_for_hyperlinks_with_l_switch_are_read_as_internal_hyperlinks(self):
+    def test_runs_in_a_complex_field_for_hyperlinks_without_switch_with_unquoted_location_are_read_as_external_hyperlinks(self):
+        element = xml_element("w:p", {}, [
+            self._BEGIN_COMPLEX_FIELD,
+            xml_element("w:instrText", {}, [
+                xml_text(' HYPERLINK http://example.com')
+            ]),
+            self._SEPARATE_COMPLEX_FIELD,
+            _run_element_with_text("this is a hyperlink"),
+            self._END_COMPLEX_FIELD,
+        ])
+        paragraph = _read_and_get_document_xml_element(element)
+
+        assert_that(paragraph, is_paragraph(children=is_sequence(
+            is_empty_run,
+            self._is_empty_hyperlinked_run,
+            self._is_hyperlinked_run(
+                href=self._URI,
+                children=is_sequence(
+                    is_text("this is a hyperlink"),
+                ),
+            ),
+            is_empty_run,
+        )))
+
+    def test_runs_in_a_complex_field_for_hyperlinks_with_l_switch_with_quoted_location_are_read_as_internal_hyperlinks(self):
         element = xml_element("w:p", {}, [
             self._BEGIN_COMPLEX_FIELD,
             xml_element("w:instrText", {}, [
                 xml_text(' HYPERLINK \\l "InternalLink"'),
+            ]),
+            self._SEPARATE_COMPLEX_FIELD,
+            _run_element_with_text("this is a hyperlink"),
+            self._END_COMPLEX_FIELD,
+        ])
+        paragraph = _read_and_get_document_xml_element(element)
+
+        assert_that(paragraph, is_paragraph(children=is_sequence(
+            is_empty_run,
+            self._is_empty_hyperlinked_run,
+            self._is_hyperlinked_run(
+                anchor="InternalLink",
+                children=is_sequence(
+                    is_text("this is a hyperlink"),
+                ),
+            ),
+            is_empty_run,
+        )))
+
+    def test_runs_in_a_complex_field_for_hyperlinks_with_l_switch_with_unquoted_location_are_read_as_internal_hyperlinks(self):
+        element = xml_element("w:p", {}, [
+            self._BEGIN_COMPLEX_FIELD,
+            xml_element("w:instrText", {}, [
+                xml_text(' HYPERLINK \\l InternalLink'),
             ]),
             self._SEPARATE_COMPLEX_FIELD,
             _run_element_with_text("this is a hyperlink"),

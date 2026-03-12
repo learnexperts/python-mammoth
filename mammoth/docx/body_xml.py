@@ -228,13 +228,19 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
         return parse_instr_text(instr_text, fld_char=fld_char)
 
     def parse_instr_text(instr_text, *, fld_char):
-        external_link_result = re.match(r'\s*HYPERLINK "(.*)"', instr_text)
-        if external_link_result is not None:
-            return complex_fields.hyperlink(dict(href=external_link_result.group(1)))
+        link_result = re.match(r'^\s*HYPERLINK\s+(\\l\s+)?(?:"(.*)"|([^\\]\S*))', instr_text)
+        if link_result is not None:
+            if link_result.group(2) is None:
+                location = link_result.group(3)
+            else:
+                location = link_result.group(2)
 
-        internal_link_result = re.match(r'\s*HYPERLINK\s+\\l\s+"(.*)"', instr_text)
-        if internal_link_result is not None:
-            return complex_fields.hyperlink(dict(anchor=internal_link_result.group(1)))
+            if link_result.group(1) is None:
+                hyperlink_args = dict(href=location)
+            else:
+                hyperlink_args = dict(anchor=location)
+
+            return complex_fields.hyperlink(hyperlink_args)
 
         checkbox_result = re.match(r'\s*FORMCHECKBOX\s*', instr_text)
         if checkbox_result is not None:
