@@ -73,6 +73,10 @@ The output is an HTML fragment, rather than a full HTML document, encoded with U
 Since the encoding is not explicitly set in the fragment,
 opening the output file in a web browser may cause Unicode characters to be rendered incorrectly if the browser doesn't default to UTF-8.
 
+**Mammoth performs no sanitisation of the source document,
+and should therefore be used extremely carefully with untrusted user input.**
+See the [Security](#security) section for more information.
+
 #### Images
 
 By default, images are included inline in the output HTML.
@@ -110,6 +114,10 @@ For instance:
     mammoth document.docx --output-format=markdown
 
 ### Library
+
+**Mammoth performs no sanitisation of the source document,
+and should therefore be used extremely carefully with untrusted user input.**
+See the [Security](#security) section for more information.
 
 #### Basic conversion
 
@@ -282,6 +290,11 @@ Converts the source document to HTML.
   To stop using the default style map altogether,
   pass `include_default_style_map=False`.
 
+* `external_file_access`: source documents may reference files outside of the source document.
+  Access to any such external files is disabled by default.
+  To enable access when converting trusted source documents,
+  pass `external_file_access=True`.
+
 * `convert_image`: by default, images are converted to `<img>` elements with the source included inline in the `src` attribute.
   Set this argument to an [image converter](#image-converters) to override the default behaviour.
 
@@ -305,6 +318,10 @@ Converts the source document to HTML.
   * `messages`: any messages, such as errors and warnings, generated during the conversion
 
 #### `mammoth.convert_to_markdown(fileobj, **kwargs)`
+
+Markdown support is deprecated.
+Generating HTML and using a separate library to convert the HTML to Markdown is recommended,
+and is likely to produce better results.
 
 Converts the source document to Markdown.
 This behaves the same as `convert_to_html`,
@@ -384,6 +401,28 @@ The recipes directory contains [an example of how they can be converted using Li
 although the fidelity of the conversion depends entirely on LibreOffice.
 
 [wmf-libreoffice-recipe]: https://github.com/mwilliamson/python-mammoth/blob/master/recipes/wmf_images.py
+
+### Security
+
+Mammoth performs no sanitisation of the source document,
+and should therefore be used extremely carefully with untrusted user input.
+For instance:
+
+* Source documents can contain links with `javascript:` targets.
+  If, for instance, you allow users to upload source documents,
+  automatically convert the document into HTML,
+  and embed the HTML into your website without sanitisation,
+  this may create links that can execute arbitrary JavaScript when clicked.
+
+* Source documents may reference files outside of the source document.
+  If, for instance, you allow users to upload source documents to a server,
+  automatically convert the document into HTML on the server,
+  and embed the HTML into your website,
+  this may allow arbitrary files on the server to be read and exfiltrated.
+
+  To avoid this issue, access to any such external files is disabled by default.
+  To enable access when converting trusted source documents,
+  pass `external_file_access=True`.
 
 ### Document transforms
 
@@ -618,6 +657,52 @@ small-caps
 Note that this matches text that has had small caps explicitly applied to it.
 It will not match any text that is small caps because of its paragraph or run style.
 
+#### Highlight
+
+Match explicitly highlighted text:
+
+```
+highlight
+```
+
+Note that this matches text that has had a highlight explicitly applied to it.
+It will not match any text that is highlighted because of its paragraph or run style.
+
+It's also possible to match specific colours.
+For instance, to match yellow highlights:
+
+```
+highlight[color='yellow']
+```
+
+The set of colours typically used are:
+
+* `black`
+* `blue`
+* `cyan`
+* `green`
+* `magenta`
+* `red`
+* `yellow`
+* `white`
+* `darkBlue`
+* `darkCyan`
+* `darkGreen`
+* `darkMagenta`
+* `darkRed`
+* `darkYellow`
+* `darkGray`
+* `lightGray`
+
+#### Ignoring document elements
+
+Use `!` to ignore a document element.
+For instance, to ignore any paragraph with the style `Comment`:
+
+```
+p[style-name='Comment'] => !
+```
+
 ### HTML paths
 
 #### Single elements
@@ -634,6 +719,12 @@ append a dot followed by the name of the class:
 
 ```
 h1.section-title
+```
+
+To add an attribute, use square brackets similarly to a CSS attribute selector:
+
+```
+p[lang='fr']
 ```
 
 To require that an element is fresh, use `:fresh`:
@@ -727,10 +818,3 @@ After tagging, users can install the specific version with Poetry:
 [tool.poetry.dependencies]
 mammoth = { git = "https://github.com/gsmedley/python-mammoth.git", tag = "v1.4.19" }
 ```
-
-## Donations
-
-If you'd like to say thanks, feel free to [make a donation through Ko-fi](https://ko-fi.com/S6S01MG20).
-
-If you use Mammoth as part of your business,
-please consider supporting the ongoing maintenance of Mammoth by [making a weekly donation through Liberapay](https://liberapay.com/mwilliamson/donate).

@@ -56,18 +56,33 @@ def read_styles_xml_element(element):
         "paragraph": paragraph_styles,
         "character": character_styles,
         "table": table_styles,
+        "numbering": numbering_styles,
     }
 
     for style_element in element.find_children("w:style"):
-        style = _read_style_element(style_element)
-        if style is not None:
-            element_type = style_element.attributes["w:type"]
-            if element_type == "numbering":
-                numbering_styles[style.style_id] = _read_numbering_style_element(style_element)
-            else:
-                style_set = styles.get(element_type)
-                if style_set is not None:
-                    style_set[style.style_id] = style
+        element_type = style_element.attributes["w:type"]
+        if element_type == "numbering":
+            style = _read_numbering_style_element(style_element)
+        else:
+            style = _read_style_element(style_element)
+
+        if style is None:
+            continue
+
+        style_set = styles.get(element_type)
+
+        # Per 17.7.4.17 style (Style Definition) of ECMA-376 4th edition Part 1:
+        #
+        # > If multiple style definitions each declare the same value for their
+        # > styleId, then the first such instance shall keep its current
+        # > identifier with all other instances being reassigned in any manner
+        # > desired.
+        #
+        # For the purpose of conversion, there's no point holding onto styles
+        # with reassigned style IDs, so we ignore such style definitions.
+
+        if style_set is not None and style.style_id not in style_set:
+            style_set[style.style_id] = style
 
     return Styles(
         paragraph_styles=paragraph_styles,
@@ -87,14 +102,20 @@ def _read_style_element(element):
         return Style(style_id=style_id, name=name)
 
 
-NumberingStyle = collections.namedtuple("NumberingStyle", ["num_id"])
+NumberingStyle = collections.namedtuple("NumberingStyle", ["style_id", "num_id"])
 
 
 def _read_numbering_style_element(element):
+    style_id = _read_style_id(element)
+
     num_id = element \
         .find_child_or_null("w:pPr") \
         .find_child_or_null("w:numPr") \
         .find_child_or_null("w:numId") \
         .attributes.get("w:val")
 
-    return NumberingStyle(num_id=num_id)
+    return NumberingStyle(style_id=style_id, num_id=num_id)
+
+
+def _read_style_id(element):
+    return element.attributes["w:styleId"]

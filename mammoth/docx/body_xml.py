@@ -7,9 +7,10 @@ from mammoth import results
 from .. import documents
 from .. import results
 from .. import lists
+from .. import transforms
 from . import complex_fields
 from .dingbats import dingbats
-from .xmlparser import node_types, XmlElement
+from .xmlparser import node_types, XmlElement, null_xml_element
 from .styles_xml import Styles
 from .uris import replace_fragment, uri_to_zip_entry_name
 
@@ -53,6 +54,10 @@ class _BodyReader(object):
 
 
 def _create_reader(numbering, content_types, relationships, styles, docx_file, files):
+    current_instr_text = []
+    complex_field_stack = []
+
+    # When a paragraph is marked as deleted, its contents should be combined
     _ignored_elements = set([
         "office-word:wrap",
         "v:shadow",
@@ -101,6 +106,7 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
         is_strikethrough = read_boolean_element(properties.find_child("w:strike"))
         is_all_caps = read_boolean_element(properties.find_child("w:caps"))
         is_small_caps = read_boolean_element(properties.find_child("w:smallCaps"))
+        highlight = read_highlight_value(properties.find_child_or_null("w:highlight").attributes.get("w:val"))
 
         def add_complex_field_hyperlink(children):
             hyperlink_kwargs = current_hyperlink_kwargs()
@@ -127,16 +133,29 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
                 font_size=font_size,
                 highlight_color=highlight_color,
                 font_color=font_color,
+                highlight=highlight,
             ))
 
     def _read_run_style(properties):
         return _read_style(properties, "w:rStyle", "Run", styles.find_character_style_by_id)
 
     def read_boolean_element(element):
-        return element and element.attributes.get("w:val") not in ["false", "0"]
+        if element is None:
+            return False
+        else:
+            return read_boolean_attribute_value(element.attributes.get("w:val"))
+
+    def read_boolean_attribute_value(value):
+        return value not in ["false", "0"]
 
     def read_underline_element(element):
-        return element and element.attributes.get("w:val") not in ["false", "0", "none"]
+        return element and element.attributes.get("w:val") not in [None, "false", "0", "none"]
+
+    def read_highlight_value(value):
+        if not value or value == "none":
+            return None
+        else:
+            return value
 
     def paragraph(element):
         properties = element.find_child_or_null("w:pPr")
@@ -155,16 +174,13 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
                     paragraph_style_id=style[0],
                     element=pr_element,
                 ),
-                list_id=_read_order_list_id( pr_element ),
+                list_id=_read_order_list_id(pr_element),
                 alignment=alignment,
                 indent=indent,
             )).append_extra()
 
     def _read_paragraph_style(properties):
         return _read_style(properties, "w:pStyle", "Paragraph", styles.find_paragraph_style_by_id)
-
-    current_instr_text = []
-    complex_field_stack = []
 
     def current_hyperlink_kwargs():
         for complex_field in reversed(complex_field_stack):
@@ -176,31 +192,66 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
     def read_fld_char(element):
         fld_char_type = element.attributes.get("w:fldCharType")
         if fld_char_type == "begin":
-            complex_field_stack.append(complex_fields.unknown)
+            complex_field_stack.append(complex_fields.begin(fld_char=element))
             del current_instr_text[:]
+
         elif fld_char_type == "end":
             if len(complex_field_stack) > 0:
-                complex_field_stack.pop()
+                complex_field = complex_field_stack.pop()
+                if isinstance(complex_field, complex_fields.Begin):
+                    complex_field = parse_current_instr_text(complex_field)
+
+                if isinstance(complex_field, complex_fields.Checkbox):
+                    return _success(documents.checkbox(checked=complex_field.checked))
+
         elif fld_char_type == "separate":
-            instr_text = "".join(current_instr_text)
-            hyperlink_kwargs = parse_hyperlink_field_code(instr_text)
-            if hyperlink_kwargs is None:
-                complex_field = complex_fields.unknown
-            else:
-                complex_field = complex_fields.hyperlink(hyperlink_kwargs)
             if len(complex_field_stack) > 0:
-                complex_field_stack.pop()
+                complex_field_separate = complex_field_stack.pop()
+                complex_field = parse_current_instr_text(complex_field_separate)
+            else:
+                complex_field = complex_fields.unknown
             complex_field_stack.append(complex_field)
+
         return _empty_result
 
-    def parse_hyperlink_field_code(instr_text):
-        external_link_result = re.match(r'\s*HYPERLINK "(.*)"', instr_text)
-        if external_link_result is not None:
-            return dict(href=external_link_result.group(1))
+    def parse_current_instr_text(complex_field):
+        instr_text = "".join(current_instr_text)
 
-        internal_link_result = re.match(r'\s*HYPERLINK\s+\\l\s+"(.*)"', instr_text)
-        if internal_link_result is not None:
-            return dict(anchor=internal_link_result.group(1))
+        if isinstance(complex_field, complex_fields.Begin):
+            fld_char = complex_field.fld_char
+        else:
+            fld_char = null_xml_element
+
+        return parse_instr_text(instr_text, fld_char=fld_char)
+
+    def parse_instr_text(instr_text, *, fld_char):
+        link_result = re.match(r'^\s*HYPERLINK\s+(\\l\s+)?(?:"(.*)"|([^\\]\S*))', instr_text)
+        if link_result is not None:
+            if link_result.group(2) is None:
+                location = link_result.group(3)
+            else:
+                location = link_result.group(2)
+
+            if link_result.group(1) is None:
+                hyperlink_args = dict(href=location)
+            else:
+                hyperlink_args = dict(anchor=location)
+
+            return complex_fields.hyperlink(hyperlink_args)
+
+        checkbox_result = re.match(r'\s*FORMCHECKBOX\s*', instr_text)
+        if checkbox_result is not None:
+            checkbox_element = fld_char \
+                .find_child_or_null("w:ffData") \
+                .find_child_or_null("w:checkBox")
+            checked_element = checkbox_element.find_child("w:checked")
+
+            if checked_element is None:
+                checked = read_boolean_element(checkbox_element.find_child("w:default"))
+            else:
+                checked = read_boolean_element(checked_element)
+
+            return complex_fields.checkbox(checked=checked)
 
         return None
 
@@ -232,24 +283,30 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
     def _read_numbering_properties(paragraph_style_id, element):
         num_id_element = element.find_child_or_null("w:numId")
         ilvl_element = element.find_child_or_null("w:ilvl")
-        
+
         num_id = num_id_element.attributes.get("w:val") if num_id_element else None
         ilvl = ilvl_element.attributes.get("w:val") if ilvl_element else None
 
         if num_id == "0":
             return None
 
+        if num_id is not None and ilvl is not None:
+            return numbering.find_level(num_id, ilvl)
+
         if paragraph_style_id is not None:
             level = numbering.find_level_by_paragraph_style_id(paragraph_style_id)
             if level is not None:
                 return level
 
-        if num_id is None or ilvl is None:
-            return None
+        # Some malformed documents define numbering levels without an index, and
+        # reference the numbering using a w:numPr element without a w:ilvl child.
+        # To handle such cases, we assume a level of 0 as a fallback.
+        if num_id is not None:
+            return numbering.find_level(num_id, "0")
 
-        return numbering.find_level(num_id, ilvl)
+        return None
 
-    def _read_order_list_id( element):
+    def _read_order_list_id(element):
         return element.find_child_or_null("w:numId").attributes.get("w:val")
 
     def _read_paragraph_indent(element):
@@ -313,6 +370,12 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
 
     def table_row(element):
         properties = element.find_child_or_null("w:trPr")
+
+        # See 17.13.5.12 del (Deleted Table Row) of ECMA-376 4th edition Part 1
+        is_deleted = bool(properties.find_child("w:del"))
+        if is_deleted:
+            return _empty_result
+
         is_header = bool(properties.find_child("w:tblHeader"))
         return _read_xml_elements(element.children) \
             .map(lambda children: documents.table_row(
@@ -333,12 +396,11 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
             colspan = int(gridspan)
 
         return _read_xml_elements(element.children) \
-            .map(lambda children: _add_attrs(
-                documents.table_cell(
-                    children=children,
-                    colspan=colspan
-                ),
-                _vmerge=read_vmerge(properties),
+            .map(lambda children: documents.table_cell_unmerged(
+                children=children,
+                colspan=colspan,
+                rowspan=1,
+                vmerge=read_vmerge(properties),
             ))
 
     def read_vmerge(properties):
@@ -356,16 +418,18 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
             for row in rows
         )
         if unexpected_non_rows:
+            rows = remove_unmerged_table_cells(rows)
             return _elements_result_with_messages(rows, [results.warning(
                 "unexpected non-row element in table, cell merging may be incorrect"
             )])
 
         unexpected_non_cells = any(
-            not isinstance(cell, documents.TableCell)
+            not isinstance(cell, documents.TableCellUnmerged)
             for row in rows
             for cell in row.children
         )
         if unexpected_non_cells:
+            rows = remove_unmerged_table_cells(rows)
             return _elements_result_with_messages(rows, [results.warning(
                 "unexpected non-cell element in table row, cell merging may be incorrect"
             )])
@@ -374,19 +438,39 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
         for row in rows:
             cell_index = 0
             for cell in row.children:
-                if cell._vmerge and cell_index in columns:
+                if cell.vmerge and cell_index in columns:
                     columns[cell_index].rowspan += 1
                 else:
                     columns[cell_index] = cell
-                    cell._vmerge = False
+                    cell.vmerge = False
                 cell_index += cell.colspan
 
         for row in rows:
-            row.children = lists.filter(lambda cell: not cell._vmerge, row.children)
-            for cell in row.children:
-                del cell._vmerge
+            row.children = [
+                documents.table_cell(
+                    children=cell.children,
+                    colspan=cell.colspan,
+                    rowspan=cell.rowspan,
+                )
+                for cell in row.children
+                if not cell.vmerge
+            ]
 
         return _success(rows)
+
+
+    def remove_unmerged_table_cells(rows):
+        return list(map(
+            transforms.element_of_type(
+                documents.TableCellUnmerged,
+                lambda cell: documents.table_cell(
+                    children=cell.children,
+                    colspan=cell.colspan,
+                    rowspan=cell.rowspan,
+                ),
+            ),
+            rows,
+        ))
 
 
     def read_child_elements(element):
@@ -445,11 +529,21 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
 
 
     def inline(element):
-        properties = element.find_child_or_null("wp:docPr").attributes
+        properties_element = element.find_child_or_null("wp:docPr")
+
+        properties = properties_element.attributes
         if properties.get("descr", "").strip():
             alt_text = properties.get("descr")
         else:
             alt_text = properties.get("title")
+
+        hlink_click_element = properties_element.find_child_or_null("a:hlinkClick")
+        hyperlink_relationship_id = hlink_click_element.attributes.get("r:id")
+        if hyperlink_relationship_id:
+            href = relationships.find_target_by_relationship_id(hyperlink_relationship_id)
+        else:
+            href = None
+
         dimensions = element.find_child_or_null("wp:extent").attributes
         if dimensions.get("cx") is not None:
             size = documents.Size(
@@ -472,34 +566,34 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
             hasattr(shape_props, "children") and
             any(getattr(child, "name", None) == "a:ln" for child in shape_props.children)
         )
-                    
-        return _read_blips(blips, alt_text, size, has_border)
+
+        return _read_blips(blips, alt_text, size, has_border, href)
 
     def _emu_to_pixel(emu):
         return int(round(float(emu) / EMU_PER_PIXEL))
 
-    def _read_blips(blips, alt_text, size, has_border):
+    def _read_blips(blips, alt_text, size, has_border, href=None):
         return _ReadResult.concat(lists.map(
-            lambda blip: _read_blip(blip, alt_text, size, has_border),
+            lambda blip: _read_blip(blip, alt_text, size, has_border, href),
             blips
         ))
 
-    def _read_blip(element, alt_text, size, has_border):
-        return _read_image(lambda: _find_blip_image(element), alt_text, size, has_border)
+    def _read_blip(element, alt_text, size, has_border, href=None):
+        return _read_image(lambda: _find_blip_image(element), alt_text, size, has_border, href)
 
-    def _read_image(find_image, alt_text, size=None, has_border=False):
+    def _read_image(find_image, alt_text, size=None, has_border=False, href=None):
         find_result = find_image()
-        
+
         if find_result is None:
             warning = results.warning("Could not find image file for a:blip element")
             return _empty_result_with_message(warning)
-        else: 
-            image_path, open_image = find_result    
+        else:
+            image_path, open_image = find_result
             content_type = content_types.find_content_type(image_path)
             image = documents.image(alt_text=alt_text, content_type=content_type, size=size, open=open_image)
             if image.attributes is None:
                 image.attributes = {}
-            
+
             if has_border:
                 image.attributes["class"] = "fr-bordered"
 
@@ -508,7 +602,14 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
             else:
                 messages = [results.warning("Image of type {0} is unlikely to display in web browsers".format(content_type))]
 
-            return _element_result_with_messages(image, messages)
+            result = _element_result_with_messages(image, messages)
+            if href is None:
+                return result
+            else:
+                return result.map(lambda image_elements: documents.hyperlink(
+                    image_elements,
+                    href=href,
+                ))
 
     def _find_blip_image(element):
         embed_relationship_id = element.attributes.get("r:embed")
@@ -595,10 +696,52 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
         return _success(documents.comment_reference(element.attributes["w:id"]))
 
     def alternate_content(element):
-        return read_child_elements(element.find_child("mc:Fallback"))
+        return read_child_elements(element.find_child_or_null("mc:Fallback"))
 
     def read_sdt(element):
-        return read_child_elements(element.find_child_or_null("w:sdtContent"))
+        content_result = read_child_elements(element.find_child_or_null("w:sdtContent"))
+
+        def handle_content(content):
+            # From the WordML standard: https://learn.microsoft.com/en-us/openspecs/office_standards/ms-docx/3350cb64-931f-41f7-8824-f18b2568ce66
+            #
+            # > A CT_SdtCheckbox element that specifies that the parent
+            # > structured document tag is a checkbox when displayed in the
+            # > document. The parent structured document tag contents MUST
+            # > contain a single character and optionally an additional
+            # > character in a deleted run.
+            checkbox = element.find_child_or_null("w:sdtPr").find_child("wordml:checkbox")
+
+            if checkbox is None:
+                return content
+
+            checked_element = checkbox.find_child("wordml:checked")
+            is_checked = (
+                checked_element is not None and
+                read_boolean_attribute_value(checked_element.attributes.get("wordml:val"))
+            )
+            document_checkbox = documents.checkbox(checked=is_checked)
+
+            has_checkbox = False
+
+            def transform_text(text):
+                nonlocal has_checkbox
+                if len(text.value) > 0 and not has_checkbox:
+                    has_checkbox = True
+                    return document_checkbox
+                else:
+                    return text
+
+            replaced_content = list(map(
+                transforms.element_of_type(documents.Text, transform_text),
+                content,
+            ))
+
+            if has_checkbox:
+                return replaced_content
+            else:
+                return document_checkbox
+
+        return content_result.map(handle_content)
 
     handlers = {
         "w:t": text,
@@ -730,13 +873,6 @@ def _concat(*values):
         for element in value:
             result.append(element)
     return result
-
-
-def _add_attrs(obj, **kwargs):
-    for key, value in kwargs.items():
-        setattr(obj, key, value)
-
-    return obj
 
 
 def _is_int(value):
