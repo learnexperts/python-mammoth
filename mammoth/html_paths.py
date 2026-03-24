@@ -7,15 +7,15 @@ def path(elements):
     return HtmlPath(elements)
 
 
-def element(names, class_names=None, fresh=None, separator=None, attributes=None):
+def element(names, attributes=None, class_names=None, fresh=None, separator=None):
+    if attributes is None:
+        attributes = {}
     if class_names is None:
         class_names = []
     if fresh is None:
         fresh = False
-    if attributes is None:
-         attributes = {}
     if class_names:
-        attributes["class"] = "".join(class_names)
+        attributes["class"] = " ".join(class_names)
 
     return HtmlPathElement(html.tag(
         tag_names=names,
@@ -28,13 +28,14 @@ def element(names, class_names=None, fresh=None, separator=None, attributes=None
 @cobble.data
 class HtmlPath(object):
     elements = cobble.field()
-    
+
     def wrap(self, generate_nodes, extra_attributes={}):
         nodes = generate_nodes()
-   
+
         for element in reversed(self.elements):
             nodes = element.wrap_nodes(nodes, extra_attributes)
-        
+
+
         return nodes
 
 

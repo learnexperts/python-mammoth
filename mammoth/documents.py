@@ -56,6 +56,7 @@ class Run(HasChildren):
     font_size = cobble.field()
     highlight_color = cobble.field()
     font_color = cobble.field()
+    highlight = cobble.field()
 
 @cobble.data
 class Text(Element):
@@ -66,6 +67,12 @@ class Hyperlink(HasChildren):
     href = cobble.field()
     anchor = cobble.field()
     target_frame = cobble.field()
+
+@cobble.data
+class Checkbox(Element):
+    checked = cobble.field()
+
+checkbox = Checkbox
 
 @cobble.data
 class Table(HasChildren):
@@ -80,6 +87,19 @@ class TableRow(HasChildren):
 class TableCell(HasChildren):
     colspan = cobble.field()
     rowspan = cobble.field()
+
+@cobble.data
+class TableCellUnmerged:
+    children = cobble.field()
+    colspan = cobble.field()
+    rowspan = cobble.field()
+    vmerge = cobble.field()
+
+    def _accept1(self, visitor, arg0):
+        return visitor.visit_table_cell(self, arg0)
+
+    def copy(self, **kwargs):
+        return cobble.copy(self, **kwargs)
 
 @cobble.data
 class Break(Element):
@@ -140,6 +160,7 @@ def run(
     font_size=None,
     highlight_color=None,
     font_color=None,
+    highlight=None,
 ):
     if vertical_alignment is None:
         vertical_alignment = VerticalAlignment.baseline
@@ -158,6 +179,7 @@ def run(
         font_size=font_size,
         highlight_color=highlight_color,
         font_color=font_color,
+        highlight=highlight,
     )
 
 class VerticalAlignment(object):
@@ -219,6 +241,8 @@ def table_cell(children, colspan=None, rowspan=None):
         rowspan = 1
     return TableCell(children=children, colspan=colspan, rowspan=rowspan)
 
+def table_cell_unmerged(children, colspan, rowspan, vmerge):
+    return TableCellUnmerged(children=children, colspan=colspan, rowspan=rowspan, vmerge=vmerge)
 
 def numbering_level(level_index, is_ordered):
     return _NumberingLevel(str(level_index), bool(is_ordered))

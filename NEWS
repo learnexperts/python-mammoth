@@ -1,3 +1,82 @@
+# 1.12.0
+
+* Handle hyperlinked wp:anchor and wp:inline elements.
+
+* Handle hyperlink complex fields with unquoted hrefs.
+
+# 1.11.0
+
+* Ignore style definitions using a style ID that has already been used.
+
+* Fix conversion of unmerged table cells.
+
+* Disable external file accesses by default. External file access can be enabled
+  using the external_file_access argument.
+
+* Handle numbering levels defined without an index.
+
+# 1.10.0
+
+* Add "Heading" and "Body" styles, as found in documents created by Apple Pages,
+  to the default style map.
+
+* Handle structured document tags representing checkboxes wrapped in other
+  elements, such as table cells. Previously, the wrapping elements would have
+  been ignored.
+
+* Ignore deleted table rows.
+
+* Add notes on security.
+
+# 1.9.1
+
+* Ignore AlternateContent elements when there is no Fallback element.
+
+# 1.9.0
+
+* Detect checkboxes, both as complex fields and structured document tags, and
+  convert them to checkbox inputs.
+
+* Ignore AlternateContent elements when there is no Fallback element.
+
+# 1.8.0
+
+* Add style mapping for highlights.
+
+# 1.7.1
+
+* Switch the precedence of numbering properties in paragraph properties and the
+  numbering in paragraph styles so that the numbering properties in paragraph
+  properties takes precedence.
+
+# 1.7.0
+
+* Support attributes in HTML paths in style mappings.
+
+* Improve error message when failing to find the body element in a document.
+
+* Drop support for Python 2.7, Python 3.5 and Python 3.6.
+
+* Add support for the strict document format.
+
+# 1.6.0
+
+* Support merged paragraphs when revisions are tracked.
+
+# 1.5.1
+
+* Add a pyproject.toml to add an explicit build dependency on setuptools.
+
+# 1.5.0
+
+* Only use the alt text of image elements as a fallback. If an alt attribute is
+  returned from the function passed to mammoth.images.img_element, that value
+  will now be preferred to the alt text of the image element.
+
+# 1.4.19
+
+* Ignore w:u elements when w:val is missing.
+
 # 1.4.18
 
 * Emit warning instead of throwing exception when image file cannot be found for
