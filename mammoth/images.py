@@ -6,7 +6,7 @@ from . import html
 def img_element(func):
     def convert_image(image):
         attributes = {**(image.attributes or {}), **func(image).copy()}
-        if image.alt_text:
+        if image.alt_text and "alt" not in attributes:
             attributes["alt"] = image.alt_text
         if image.size:
             attributes["width"] = image.size.width

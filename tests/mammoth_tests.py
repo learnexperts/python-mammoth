@@ -9,10 +9,9 @@ import os
 
 import tempman
 
-from nose.tools import istest, assert_equal
 from .testing import assert_equal, generate_test_path
 
-test_path = generate_test_path
+_test_path = generate_test_path
 
 import mammoth
 from mammoth import results
@@ -117,9 +116,8 @@ def test_inline_images_referenced_by_path_relative_to_base_are_included_in_outpu
         assert_equal([], result.messages)
 
 
-@istest
-def when_external_file_access_is_enabled_images_stored_outside_of_document_are_included_in_output():
-    with open(test_path("external-picture.docx"), "rb") as fileobj:
+def test_when_external_file_access_is_enabled_images_stored_outside_of_document_are_included_in_output():
+    with open(_test_path("external-picture.docx"), "rb") as fileobj:
         result = mammoth.convert_to_html(fileobj=fileobj, external_file_access=True)
         html = result.value
         assert '<img' in html, "Expected an image in the output"
@@ -318,27 +316,23 @@ def test_can_extract_raw_text():
         assert_equal([], result.messages)
         assert_equal("Apple\n\nBanana\n\n", result.value)
 
-@istest
-def ordered_lists_respect_the_start_number():
-    with open(test_path("ordered-list-numbering.docx"), "rb") as fileobj:
+def test_ordered_lists_respect_the_start_number():
+    with open(_test_path("ordered-list-numbering.docx"), "rb") as fileobj:
         result = mammoth.convert_to_html(fileobj=fileobj)
         assert_equal("""<ol><li data-li-order="7">Seven</li><li data-li-order="8">Eight</li><li data-li-order="9">Nine</li><li data-li-order="10">Ten</li><li data-li-order="11">Eleven</li><li data-li-order="1">One<ol type="a"><li data-li-order="5">EE</li><li data-li-order="6">FF</li></ol></li><li data-li-order="2">Two</li></ol>""", result.value)
 
-@istest
-def ordered_lists_are_continued_from_previous():
-    with open(test_path("ordered-nested-list-numbering.docx"), "rb") as fileobj:
+def test_ordered_lists_are_continued_from_previous():
+    with open(_test_path("ordered-nested-list-numbering.docx"), "rb") as fileobj:
         result = mammoth.convert_to_html(fileobj=fileobj)
         assert_equal("""<ol><li data-li-order="1">One <ol type="a"><li data-li-order="1">One a </li><li data-li-order="2">One b </li><li data-li-order="3">One c </li></ol></li><li data-li-order="2">Two <ol type="a"><li data-li-order="1">Two a</li></ol></li></ol><p>Para 1</p><ul><li><ol type="a"><li data-li-order="2">Two b</li></ol></li></ul><ol><li data-li-order="3">Three<ol type="a"><li data-li-order="7">Three g</li><li data-li-order="8">Three h </li></ol></li></ol><p>Para 2</p><ol><li data-li-order="4">Four </li><li data-li-order="5">Five </li><li data-li-order="7">Seven</li></ol>""", result.value)
 
-@istest
-def paragraphs_are_aligned():
-    with open(test_path("alignment.docx"), "rb") as fileobj:
+def test_paragraphs_are_aligned():
+    with open(_test_path("alignment.docx"), "rb") as fileobj:
         result = mammoth.convert_to_html(fileobj=fileobj)
         assert_equal("""<p>Left</p><p data-alignment="center">Middle</p><p data-alignment="right">Right</p>""", result.value)
 
-@istest
-def paragraphs_have_style_names():
-    with open(test_path("style_names.docx"), "rb") as fileobj:
+def test_paragraphs_have_style_names():
+    with open(_test_path("style_names.docx"), "rb") as fileobj:
         result = mammoth.convert_to_html(fileobj=fileobj)
         assert_equal("""<p>Normal</p><p data-style-name="No Spacing">No Spacing</p><p data-style-name="Quote">Quote</p><p data-style-name="Intense Quote">Intense Quote</p>""", result.value)
 
@@ -355,9 +349,8 @@ def _copy_of_test_data(path):
         shutil.copyfileobj(source, destination)
     return destination
 
-@istest
-def image_borders_are_preserved():
-    with open(test_path("image-borders.docx"), "rb") as fileobj:
+def test_image_borders_are_preserved():
+    with open(_test_path("image-borders.docx"), "rb") as fileobj:
         result = mammoth.convert_to_html(fileobj=fileobj)
         html = result.value
         
@@ -378,16 +371,14 @@ def image_borders_are_preserved():
         assert html.count('class="fr-bordered"') == bordered_count, "Only bordered images should have fr-bordered class"
         assert "class=\"fr-bordered\"" in html
         
-@istest
-def font_colors_are_preserved():
-    with open(test_path("font-colors.docx"), "rb") as fileobj:
+def test_font_colors_are_preserved():
+    with open(_test_path("font-colors.docx"), "rb") as fileobj:
         result = mammoth.convert_to_html(fileobj=fileobj)
         html = result.value
         assert 'style="color: #' in html
 
-@istest
-def paragraphs_with_numId_zero_stripped():
-    with open(test_path("num-Id-numbered-list.docx"), "rb") as fileobj:
+def test_paragraphs_with_numId_zero_stripped():
+    with open(_test_path("num-Id-numbered-list.docx"), "rb") as fileobj:
         result = mammoth.convert_to_html(fileobj=fileobj)
         html = result.value
         print("\nHTML Output:\n", html)

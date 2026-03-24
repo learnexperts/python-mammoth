@@ -3,9 +3,6 @@
 import io
 import sys
 
-from precisely import assert_that, is_sequence
-from nose.tools import istest, assert_equal, assert_is_none
-from nose_parameterized import parameterized, param
 import funk
 from precisely import all_of, assert_that, has_attrs, instance_of, is_sequence
 import pytest
@@ -427,14 +424,12 @@ class RunTests(object):
         run = self._read_run_with_properties([font_size_xml])
         assert_equal(14, run.font_size)
 
-    @istest
-    def run_has_highlight_color_read_from_properties(self):
+    def test_run_has_highlight_color_read_from_properties(self):
         highlight_color_xml = xml_element("w:highlight", {"w:val": "green"})
         run = self._read_run_with_properties([highlight_color_xml])
         assert_equal("green", run.highlight_color)
 
-    @istest
-    def run_with_invalid_w_sz_has_none_font_size(self):
+    def test_run_with_invalid_w_sz_has_none_font_size(self):
         font_size_xml = xml_element("w:sz", {"w:val": "28a"})
         run = self._read_run_with_properties([font_size_xml])
         assert_equal(None, run.font_size)
@@ -1458,8 +1453,7 @@ class ImageTests(object):
             docx_file=docx_file,
         )
 
-    @istest
-    def can_read_shape_elements_with_rid_and_size_attributes(self):
+    def test_can_read_shape_elements_with_rid_and_size_attributes(self):
         shape_element = xml_element("v:shape", {"style": "width:31.5pt;height:38.25pt"}, [
             xml_element("v:imagedata", {
                 "r:id": self.IMAGE_RELATIONSHIP_ID,
@@ -1476,8 +1470,7 @@ class ImageTests(object):
         with image.open() as image_file:
             assert_equal(self.IMAGE_BYTES, image_file.read())
 
-    @istest
-    def cannot_resize_shape_with_multiple_nodes(self):
+    def test_cannot_resize_shape_with_multiple_nodes(self):
         shape_element = xml_element("v:shape", {"style": "width:31.5pt;height:38.25pt"}, [
             xml_element("v:imagedata", {
                 "r:id": self.IMAGE_RELATIONSHIP_ID,
@@ -1496,10 +1489,9 @@ class ImageTests(object):
         image_node = nodes[0]
         assert_equal(documents.Image, type(image_node))
         assert_equal("It's a hat", image_node.alt_text)
-        assert_is_none(image_node.size)
+        assert image_node.size is None
 
-    @istest
-    def can_read_shape_elements_with_unused_style_elements(self):
+    def test_can_read_shape_elements_with_unused_style_elements(self):
         shape_element = xml_element("v:shape", {"style": "width:31.5pt;position:absolute;height:38.25pt"}, [
             xml_element("v:imagedata", {
                 "r:id": self.IMAGE_RELATIONSHIP_ID,
@@ -1512,8 +1504,7 @@ class ImageTests(object):
         assert_equal(documents.Image, type(image))
         assert_equal(documents.Size(width="31.5pt", height="38.25pt"), image.size)
 
-    @istest
-    def can_read_shape_elements_with_inch_size_attributes(self):
+    def test_can_read_shape_elements_with_inch_size_attributes(self):
         shape_element = xml_element("v:shape", {"style": "width:0.58in;height:0.708in"}, [
             xml_element("v:imagedata", {
                 "r:id": self.IMAGE_RELATIONSHIP_ID,
@@ -1526,8 +1517,7 @@ class ImageTests(object):
         assert_equal(documents.Image, type(image))
         assert_equal(documents.Size(width="0.58in", height="0.708in"), image.size)
 
-    @istest
-    def when_imagedata_element_has_no_relationship_id_then_it_is_ignored_with_warning(self):
+    def test_when_imagedata_element_has_no_relationship_id_then_it_is_ignored_with_warning(self):
         imagedata_element = xml_element("v:imagedata")
 
         result = _read_document_xml_element(imagedata_element)

@@ -1,6 +1,5 @@
 import io
 
-from hamcrest import contains, has_properties
 from precisely import assert_that, has_attrs, is_sequence
 
 import mammoth
