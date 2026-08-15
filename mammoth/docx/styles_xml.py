@@ -92,14 +92,20 @@ def read_styles_xml_element(element):
     )
 
 
-Style = collections.namedtuple("Style", ["style_id", "name"])
+Style = collections.namedtuple("Style", ["style_id", "name", "num_id"])
+Style.__new__.__defaults__ = (None,)
 
 
 def _read_style_element(element):
     style_id = element.attributes.get("w:styleId")
     if style_id is not None:
         name = element.find_child_or_null("w:name").attributes.get("w:val")
-        return Style(style_id=style_id, name=name)
+        num_id = element \
+            .find_child_or_null("w:pPr") \
+            .find_child_or_null("w:numPr") \
+            .find_child_or_null("w:numId") \
+            .attributes.get("w:val")
+        return Style(style_id=style_id, name=name, num_id=num_id)
 
 
 NumberingStyle = collections.namedtuple("NumberingStyle", ["style_id", "num_id"])

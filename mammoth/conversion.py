@@ -74,6 +74,7 @@ class _DocumentConverter(documents.element_visitor(args=1)):
         self._convert_image = convert_image
         self._comments = comments
         self._li_counters = {}
+        self._applied_start_overrides = set()
 
     def visit_image(self, image, context):
         try:
@@ -135,7 +136,13 @@ class _DocumentConverter(documents.element_visitor(args=1)):
                     if lic_list_id == paragraph.list_id and lic_level_index > para_level_index:
                         del self._li_counters[li_counter_key]
  
-                if self._li_counters.get( list_key ) is None:                 
+                # A num's startOverride restarts the counter shared through the
+                # abstract num, but only the first time that num is referenced.
+                override_key = (paragraph.num_id, paragraph.numbering.level_index)
+                if paragraph.start_override is not None and override_key not in self._applied_start_overrides:
+                    self._applied_start_overrides.add(override_key)
+                    self._li_counters[list_key] = int(paragraph.start_override)
+                elif self._li_counters.get( list_key ) is None:
                     if paragraph.numbering.start_num is not None and paragraph.numbering.start_num != '1':
                         self._li_counters[list_key] = int(paragraph.numbering.start_num)
                     else:
