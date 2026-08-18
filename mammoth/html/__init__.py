@@ -104,7 +104,27 @@ def _try_collapse(collapsed, node):
     return True
 
 def _is_match(first, second):
-    return first.tag_name in second.tag_names and first.attributes == second.attributes
+    return first.tag_name in second.tag_names \
+        and _effective_attributes(first) == _effective_attributes(second)
+
+
+# Per-item metadata rather than element identity: every list item carries a
+# different data-li-order, and the li wrappers of nested lists carry none, so
+# comparing it would stop list items from ever collapsing.
+_IDENTITY_IGNORED_ATTRIBUTES = frozenset(["data-li-order"])
+
+
+def _effective_attributes(element):
+    # extra_attributes (e.g. type="a" on ol, set from the docx numbering
+    # format) are part of the element's identity: an alphabetic list must not
+    # collapse into a preceding numeric one.
+    if not element.extra_attributes:
+        return element.attributes
+    attributes = element.attributes.copy()
+    for key, value in element.extra_attributes.items():
+        if key not in _IDENTITY_IGNORED_ATTRIBUTES:
+            attributes[key] = value
+    return attributes
 
 
 def write(writer, nodes):

@@ -113,3 +113,45 @@ def test_when_separator_is_present_then_separator_is_prepended_to_collapsed_elem
             html.element("pre", collapsible=True, separator="\n", children=[html.text(" the"), html.text("re")]),
         ]),
     )
+
+
+def test_elements_with_different_extra_attributes_are_not_collapsed():
+    assert_equal(
+        [
+            _collapsible_element_with_extra_attributes("ol", None, [html.text("One")]),
+            _collapsible_element_with_extra_attributes("ol", {"type": "a"}, [html.text("Two")])
+        ],
+
+        html.collapse([
+            _collapsible_element_with_extra_attributes("ol", None, [html.text("One")]),
+            _collapsible_element_with_extra_attributes("ol", {"type": "a"}, [html.text("Two")])
+        ]))
+
+
+def test_elements_with_equal_extra_attributes_are_collapsed():
+    assert_equal(
+        [_collapsible_element_with_extra_attributes("ol", {"type": "a"}, [html.text("One"), html.text("Two")])],
+
+        html.collapse([
+            _collapsible_element_with_extra_attributes("ol", {"type": "a"}, [html.text("One")]),
+            _collapsible_element_with_extra_attributes("ol", {"type": "a"}, [html.text("Two")])
+        ]))
+
+
+def test_extra_attributes_are_compared_merged_with_plain_attributes():
+    assert_equal(
+        [
+            html.collapsible_element("ol", {"type": "a"}, [
+                html.text("One"),
+                html.text("Two")
+            ])
+        ],
+
+        html.collapse([
+            html.collapsible_element("ol", {"type": "a"}, [html.text("One")]),
+            _collapsible_element_with_extra_attributes("ol", {"type": "a"}, [html.text("Two")])
+        ]))
+
+
+def _collapsible_element_with_extra_attributes(tag_name, extra_attributes, children):
+    return html.Element(html.tag(tag_name, collapsible=True), children, extra_attributes)
