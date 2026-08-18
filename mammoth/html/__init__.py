@@ -104,26 +104,41 @@ def _try_collapse(collapsed, node):
     return True
 
 def _is_match(first, second):
-    return first.tag_name in second.tag_names \
-        and _effective_attributes(first) == _effective_attributes(second)
+    if first.tag_name not in second.tag_names or first.attributes != second.attributes:
+        return False
+
+    # extra_attributes set from the docx numbering format (e.g. type="a" on
+    # ol) are part of the element's identity: an alphabetic list must not
+    # collapse into a preceding plain numbered one. The check is one-sided
+    # because only the innermost list element of a paragraph's html path gets
+    # those attributes — the outer ol/li wrappers of a nested list carry none
+    # and must keep collapsing into whatever list they continue.
+    first_attributes = _effective_attributes(first)
+    return all(
+        first_attributes.get(key) == value
+        for key, value in _identity_attributes(second).items()
+    )
 
 
 # Per-item metadata rather than element identity: every list item carries a
-# different data-li-order, and the li wrappers of nested lists carry none, so
-# comparing it would stop list items from ever collapsing.
+# different data-li-order, so comparing it would stop list items from ever
+# collapsing.
 _IDENTITY_IGNORED_ATTRIBUTES = frozenset(["data-li-order"])
 
 
-def _effective_attributes(element):
-    # extra_attributes (e.g. type="a" on ol, set from the docx numbering
-    # format) are part of the element's identity: an alphabetic list must not
-    # collapse into a preceding numeric one.
+def _identity_attributes(element):
     if not element.extra_attributes:
-        return element.attributes
+        return {}
+    return dict(
+        (key, value)
+        for key, value in element.extra_attributes.items()
+        if key not in _IDENTITY_IGNORED_ATTRIBUTES
+    )
+
+
+def _effective_attributes(element):
     attributes = element.attributes.copy()
-    for key, value in element.extra_attributes.items():
-        if key not in _IDENTITY_IGNORED_ATTRIBUTES:
-            attributes[key] = value
+    attributes.update(_identity_attributes(element))
     return attributes
 
 
