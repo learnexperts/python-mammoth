@@ -153,7 +153,8 @@ class Numbering(object):
         abstract_num = self._abstract_nums.get(num.abstract_num_id)
         if abstract_num is not None and abstract_num.num_style_link is not None:
             style = self._styles.find_numbering_style_by_id(abstract_num.num_style_link)
-            return self.find_abstract_num_id(style.num_id)
+            if style is not None:
+                return self.find_abstract_num_id(style.num_id)
         return num.abstract_num_id
 
     def find_start_override(self, num_id, level):

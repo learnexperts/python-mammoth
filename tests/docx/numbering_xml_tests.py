@@ -216,6 +216,22 @@ def test_find_abstract_num_id_follows_num_style_links():
     assert_equal("100", numbering.find_abstract_num_id("201"))
 
 
+def test_find_abstract_num_id_with_unresolvable_num_style_link_returns_own_abstract_num_id():
+    numbering = _read_numbering_xml_element(
+        xml_element("w:numbering", {}, [
+            xml_element("w:abstractNum", {"w:abstractNumId": "101"}, [
+                xml_element("w:numStyleLink", {"w:val": "MissingStyle"}),
+            ]),
+            xml_element("w:num", {"w:numId": "201"}, [
+                xml_element("w:abstractNumId", {"w:val": "101"}),
+            ])
+        ]),
+        styles=Styles.create(numbering_styles={}),
+    )
+
+    assert_equal("101", numbering.find_abstract_num_id("201"))
+
+
 def test_start_override_is_read_from_lvl_override():
     numbering = _read_numbering_xml_element(
         xml_element("w:numbering", {}, [
