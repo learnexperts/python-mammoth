@@ -158,7 +158,13 @@ class _NodeWriter(NodeVisitor):
       
         if element.extra_attributes is not None:
             attrs = element.attributes.copy()
-            attrs.update( element.extra_attributes )
+            # Underscore-prefixed extra attributes (e.g. _numfmt) are internal
+            # markers for the collapse step and are never written out.
+            attrs.update(
+                (key, value)
+                for key, value in element.extra_attributes.items()
+                if not key.startswith("_")
+            )
         else:
             attrs = element.attributes
 

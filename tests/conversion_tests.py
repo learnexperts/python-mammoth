@@ -150,6 +150,32 @@ def test_letter_list_following_numbered_list_stays_a_separate_letter_list():
         result.value)
 
 
+def test_numbered_list_following_letter_list_stays_a_separate_numbered_list():
+    def _numbering(numbering_format):
+        return _AbstractNumLevel(
+            level_index=0,
+            is_ordered=True,
+            paragraph_style_id=None,
+            start_num=None,
+            numbering_format=numbering_format,
+            level_text=None,
+        )
+
+    result = convert_document_element_to_html(
+        documents.document([
+            documents.paragraph(children=[_run_with_text("First")], numbering=_numbering("lowerLetter")),
+            documents.paragraph(children=[_run_with_text("Second")], numbering=_numbering("lowerLetter")),
+            documents.paragraph(children=[_run_with_text("Question")], numbering=_numbering("decimal")),
+        ]),
+        style_map=[
+            _style_mapping("p:ordered-list(1) => ol > li:fresh")
+        ]
+    )
+    assert_equal(
+        '<ol type="a"><li>First</li><li>Second</li></ol><ol><li>Question</li></ol>',
+        result.value)
+
+
 def test_bulleted_styles_dont_match_plain_paragraph():
     result = convert_document_element_to_html(
         documents.paragraph(children=[

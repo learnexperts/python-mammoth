@@ -173,10 +173,19 @@ class _DocumentConverter(documents.element_visitor(args=1)):
                     elif bullet_char == "f0b7":
                         type = "disc"
 
+            identity = {}
             if type is not None:
+                identity["type"] = type
+            if paragraph.numbering.numbering_format:
+                # Internal marker consumed by the collapse step and stripped
+                # on write: without it a format with no type attribute (e.g.
+                # decimal) has no identity, so a numbered list adjacent to an
+                # alphabetic one would be merged into it.
+                identity["_numfmt"] = paragraph.numbering.numbering_format
+            if identity:
                 for path_elem in reversed(html_path.elements):
                     if path_elem.tag.tag_name == paren_list_tag:
-                        extra_attrs[id(path_elem)] = {"type":type}
+                        extra_attrs[id(path_elem)] = identity
                         break    
 
 
