@@ -21,6 +21,8 @@ class Paragraph(HasChildren):
     style_name = cobble.field()
     numbering = cobble.field()
     list_id = cobble.field()
+    num_id = cobble.field()
+    start_override = cobble.field()
     alignment = cobble.field()
     indent = cobble.field()
 
@@ -136,11 +138,11 @@ def document(children, notes=None, comments=None):
         comments = []
     return Document(children, notes, comments=comments)
 
-def paragraph(children, style_id=None, style_name=None, numbering=None, list_id=None, alignment=None, indent=None):
+def paragraph(children, style_id=None, style_name=None, numbering=None, list_id=None, num_id=None, start_override=None, alignment=None, indent=None):
     if indent is None:
         indent = paragraph_indent()
 
-    return Paragraph(children, style_id, style_name, numbering, list_id=list_id, alignment=alignment, indent=indent)
+    return Paragraph(children, style_id, style_name, numbering, list_id=list_id, num_id=num_id, start_override=start_override, alignment=alignment, indent=indent)
 
 def paragraph_indent(start=None, end=None, first_line=None, hanging=None):
     return ParagraphIndent(start=start, end=end, first_line=first_line, hanging=hanging)

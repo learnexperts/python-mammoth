@@ -159,6 +159,63 @@ class ParagraphTests(object):
 
         assert_equal(None, paragraph.numbering)
 
+    def test_paragraph_num_id_is_read_from_numbering_properties(self):
+        paragraph_xml = self._paragraph_with_numbering_properties([
+            xml_element("w:ilvl", {"w:val": "1"}),
+            xml_element("w:numId", {"w:val": "42"}),
+        ])
+
+        numbering = _NumberingMap({"42": {"1": documents.numbering_level("1", True)}})
+        paragraph = _read_and_get_document_xml_element(paragraph_xml, numbering=numbering)
+
+        assert_equal("42", paragraph.num_id)
+
+    def test_paragraph_num_id_falls_back_to_paragraph_style_num_id(self):
+        properties_xml = xml_element("w:pPr", {}, [
+            xml_element("w:pStyle", {"w:val": "List"}),
+        ])
+        paragraph_xml = xml_element("w:p", {}, [properties_xml])
+
+        styles = Styles.create(
+            paragraph_styles={"List": Style(style_id="List", name="List", num_id="42")},
+        )
+        numbering = _NumberingMap(
+            levels_by_paragraph_style_id={"List": documents.numbering_level("0", True)},
+            abstract_num_ids={"42": "7"},
+        )
+        paragraph = _read_and_get_document_xml_element(paragraph_xml, styles=styles, numbering=numbering)
+
+        assert_equal("42", paragraph.num_id)
+        assert_equal("abstract-7", paragraph.list_id)
+
+    def test_paragraph_list_id_is_shared_abstract_num_id_when_resolvable(self):
+        paragraph_xml = self._paragraph_with_numbering_properties([
+            xml_element("w:ilvl", {"w:val": "1"}),
+            xml_element("w:numId", {"w:val": "42"}),
+        ])
+
+        numbering = _NumberingMap(
+            nums={"42": {"1": documents.numbering_level("1", True)}},
+            abstract_num_ids={"42": "7"},
+            start_overrides={("42", "1"): "5"},
+        )
+        paragraph = _read_and_get_document_xml_element(paragraph_xml, numbering=numbering)
+
+        assert_equal("abstract-7", paragraph.list_id)
+        assert_equal("5", paragraph.start_override)
+
+    def test_paragraph_list_id_falls_back_to_num_id_when_abstract_num_is_unknown(self):
+        paragraph_xml = self._paragraph_with_numbering_properties([
+            xml_element("w:ilvl", {"w:val": "1"}),
+            xml_element("w:numId", {"w:val": "42"}),
+        ])
+
+        numbering = _NumberingMap({"42": {"1": documents.numbering_level("1", True)}})
+        paragraph = _read_and_get_document_xml_element(paragraph_xml, numbering=numbering)
+
+        assert_equal("42", paragraph.list_id)
+        assert_equal(None, paragraph.start_override)
+
     def test_paragraph_with_deleted_paragraph_mark_is_preserved_as_separate_paragraph(self):
         styles = Styles.create(
             paragraph_styles={
@@ -1950,17 +2007,29 @@ def _image_relationship(relationship_id, target):
 
 
 class _NumberingMap(object):
-    def __init__(self, nums=None, levels_by_paragraph_style_id=None):
+    def __init__(self, nums=None, levels_by_paragraph_style_id=None, abstract_num_ids=None, start_overrides=None):
         if nums is None:
             nums = {}
         if levels_by_paragraph_style_id is None:
             levels_by_paragraph_style_id = {}
+        if abstract_num_ids is None:
+            abstract_num_ids = {}
+        if start_overrides is None:
+            start_overrides = {}
 
         self._nums = nums
         self._levels_by_paragraph_style_id = levels_by_paragraph_style_id
+        self._abstract_num_ids = abstract_num_ids
+        self._start_overrides = start_overrides
 
     def find_level(self, num_id, level):
         return self._nums[num_id][level]
 
     def find_level_by_paragraph_style_id(self, style_id):
         return self._levels_by_paragraph_style_id.get(style_id)
+
+    def find_abstract_num_id(self, num_id):
+        return self._abstract_num_ids.get(num_id)
+
+    def find_start_override(self, num_id, level):
+        return self._start_overrides.get((num_id, level))

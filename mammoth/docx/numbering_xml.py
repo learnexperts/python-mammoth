@@ -97,12 +97,24 @@ def to_numbering_level(abstract_num_level):
 def _read_num(element):
     num_id = element.attributes.get("w:numId")
     abstract_num_id = element.find_child_or_null("w:abstractNumId").attributes["w:val"]
-    return num_id, _Num(abstract_num_id=abstract_num_id)
+
+    # w:lvlOverride/w:startOverride restarts the abstract num's counter at the
+    # given value the first time this num is referenced (this is how Word
+    # implements "Restart at 1" on a list that shares numbering with others).
+    start_overrides = {}
+    for override_element in element.find_children("w:lvlOverride"):
+        level_index = override_element.attributes.get("w:ilvl")
+        start_override = override_element.find_child_or_null("w:startOverride").attributes.get("w:val")
+        if level_index is not None and start_override is not None:
+            start_overrides[level_index] = start_override
+
+    return num_id, _Num(abstract_num_id=abstract_num_id, start_overrides=start_overrides)
 
 
 @cobble.data
 class _Num(object):
     abstract_num_id = cobble.field()
+    start_overrides = cobble.field()
 
 
 class Numbering(object):
@@ -133,6 +145,23 @@ class Numbering(object):
 
     def find_level_by_paragraph_style_id(self, style_id):
         return self._levels_by_paragraph_style_id.get(style_id)
+
+    def find_abstract_num_id(self, num_id):
+        num = self._nums.get(num_id)
+        if num is None:
+            return None
+        abstract_num = self._abstract_nums.get(num.abstract_num_id)
+        if abstract_num is not None and abstract_num.num_style_link is not None:
+            style = self._styles.find_numbering_style_by_id(abstract_num.num_style_link)
+            if style is not None:
+                return self.find_abstract_num_id(style.num_id)
+        return num.abstract_num_id
+
+    def find_start_override(self, num_id, level):
+        num = self._nums.get(num_id)
+        if num is None:
+            return None
+        return num.start_overrides.get(level)
 
 
 
