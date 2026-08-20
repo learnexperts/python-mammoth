@@ -132,3 +132,26 @@ def _style_without_name_element(element_type, style_id):
 def _style_element_with_children(element_type, style_id, children):
     attributes = {"w:type": element_type, "w:styleId": style_id}
     return xml_element("w:style", attributes, children)
+
+
+def test_paragraph_style_has_none_num_id_if_style_has_no_numbering_properties():
+    element = xml_element("w:styles", {}, [
+        _paragraph_style_element("List1", "List 1"),
+    ])
+    styles = read_styles_xml_element(element)
+    assert_equal(None, styles.find_paragraph_style_by_id("List1").num_id)
+
+
+def test_paragraph_style_has_num_id_read_from_paragraph_properties():
+    element = xml_element("w:styles", {}, [
+        xml_element("w:style", {"w:type": "paragraph", "w:styleId": "List1"}, [
+            xml_element("w:name", {"w:val": "List 1"}),
+            xml_element("w:pPr", {}, [
+                xml_element("w:numPr", {}, [
+                    xml_element("w:numId", {"w:val": "42"})
+                ]),
+            ]),
+        ]),
+    ])
+    styles = read_styles_xml_element(element)
+    assert_equal("42", styles.find_paragraph_style_by_id("List1").num_id)

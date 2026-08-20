@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 
 import base64
 import io
+import re
 import shutil
 import os
 
@@ -381,7 +382,19 @@ def test_paragraphs_with_numId_zero_stripped():
     with open(_test_path("num-Id-numbered-list.docx"), "rb") as fileobj:
         result = mammoth.convert_to_html(fileobj=fileobj)
         html = result.value
-        print("\nHTML Output:\n", html)
-        assert "<ol>" in html, "No <ol> should be rendered for numId=0"
-        assert "<li>" in html, "No <li> should be rendered for numId=0"
+        assert "<ol" in html, "Should render ordered lists"
+        assert "<li" in html, "Should render list items"
         assert "<p>" in html, "Should render normal paragraphs"
+        # numId=0 suppresses numbering: the NOTE stays a plain paragraph.
+        assert re.search(r"<p[^>]*>NOTE: OpenText", html)
+
+
+def test_style_numbered_lists_continue_across_interruptions():
+    # Numbering that comes from the paragraph style (no explicit w:numPr on
+    # the paragraphs) shares one counter per abstract num, so a list
+    # interrupted by notes and images keeps counting instead of restarting.
+    with open(_test_path("num-Id-numbered-list.docx"), "rb") as fileobj:
+        result = mammoth.convert_to_html(fileobj=fileobj)
+        html = result.value
+        orders = re.findall(r'data-li-order="(\d+)"', html)
+        assert orders[:6] == ["1", "2", "3", "4", "5", "6"], orders[:6]
