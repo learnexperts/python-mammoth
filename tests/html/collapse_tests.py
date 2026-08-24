@@ -113,3 +113,57 @@ def test_when_separator_is_present_then_separator_is_prepended_to_collapsed_elem
             html.element("pre", collapsible=True, separator="\n", children=[html.text(" the"), html.text("re")]),
         ]),
     )
+
+
+def test_elements_with_different_extra_attributes_are_not_collapsed():
+    assert_equal(
+        [
+            _collapsible_element_with_extra_attributes("ol", None, [html.text("One")]),
+            _collapsible_element_with_extra_attributes("ol", {"type": "a"}, [html.text("Two")])
+        ],
+
+        html.collapse([
+            _collapsible_element_with_extra_attributes("ol", None, [html.text("One")]),
+            _collapsible_element_with_extra_attributes("ol", {"type": "a"}, [html.text("Two")])
+        ]))
+
+
+def test_elements_with_equal_extra_attributes_are_collapsed():
+    assert_equal(
+        [_collapsible_element_with_extra_attributes("ol", {"type": "a"}, [html.text("One"), html.text("Two")])],
+
+        html.collapse([
+            _collapsible_element_with_extra_attributes("ol", {"type": "a"}, [html.text("One")]),
+            _collapsible_element_with_extra_attributes("ol", {"type": "a"}, [html.text("Two")])
+        ]))
+
+
+def test_identity_attributes_are_compared_against_merged_plain_and_extra_attributes():
+    assert_equal(
+        [
+            _collapsible_element_with_extra_attributes("ol", {"type": "a", "data-li-order": "3"}, [
+                html.text("One"),
+                html.text("Two")
+            ])
+        ],
+
+        html.collapse([
+            _collapsible_element_with_extra_attributes("ol", {"type": "a", "data-li-order": "3"}, [html.text("One")]),
+            _collapsible_element_with_extra_attributes("ol", {"type": "a", "data-li-order": "7"}, [html.text("Two")])
+        ]))
+
+
+def _collapsible_element_with_extra_attributes(tag_name, extra_attributes, children):
+    return html.Element(html.tag(tag_name, collapsible=True), children, extra_attributes)
+
+
+def test_element_without_extra_attributes_can_collapse_into_element_with_extra_attributes():
+    # The outer ol/li wrappers of a nested list's html path carry no extra
+    # attributes and must keep collapsing into the list they continue.
+    assert_equal(
+        [_collapsible_element_with_extra_attributes("ol", {"type": "a"}, [html.text("One"), html.text("Two")])],
+
+        html.collapse([
+            _collapsible_element_with_extra_attributes("ol", {"type": "a"}, [html.text("One")]),
+            _collapsible_element_with_extra_attributes("ol", None, [html.text("Two")])
+        ]))

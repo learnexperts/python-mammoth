@@ -104,7 +104,42 @@ def _try_collapse(collapsed, node):
     return True
 
 def _is_match(first, second):
-    return first.tag_name in second.tag_names and first.attributes == second.attributes
+    if first.tag_name not in second.tag_names or first.attributes != second.attributes:
+        return False
+
+    # extra_attributes set from the docx numbering format (e.g. type="a" on
+    # ol) are part of the element's identity: an alphabetic list must not
+    # collapse into a preceding plain numbered one. The check is one-sided
+    # because only the innermost list element of a paragraph's html path gets
+    # those attributes — the outer ol/li wrappers of a nested list carry none
+    # and must keep collapsing into whatever list they continue.
+    first_attributes = _effective_attributes(first)
+    return all(
+        first_attributes.get(key) == value
+        for key, value in _identity_attributes(second).items()
+    )
+
+
+# Per-item metadata rather than element identity: every list item carries a
+# different data-li-order, so comparing it would stop list items from ever
+# collapsing.
+_IDENTITY_IGNORED_ATTRIBUTES = frozenset(["data-li-order"])
+
+
+def _identity_attributes(element):
+    if not element.extra_attributes:
+        return {}
+    return dict(
+        (key, value)
+        for key, value in element.extra_attributes.items()
+        if key not in _IDENTITY_IGNORED_ATTRIBUTES
+    )
+
+
+def _effective_attributes(element):
+    attributes = element.attributes.copy()
+    attributes.update(_identity_attributes(element))
+    return attributes
 
 
 def write(writer, nodes):
@@ -123,7 +158,13 @@ class _NodeWriter(NodeVisitor):
       
         if element.extra_attributes is not None:
             attrs = element.attributes.copy()
-            attrs.update( element.extra_attributes )
+            # Underscore-prefixed extra attributes (e.g. _numfmt) are internal
+            # markers for the collapse step and are never written out.
+            attrs.update(
+                (key, value)
+                for key, value in element.extra_attributes.items()
+                if not key.startswith("_")
+            )
         else:
             attrs = element.attributes
 
