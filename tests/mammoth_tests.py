@@ -351,26 +351,21 @@ def _copy_of_test_data(path):
     return destination
 
 def test_image_borders_are_preserved():
+    # image-borders.docx holds four pictures, in order: a:ln with a solid fill,
+    # no a:ln at all, no a:ln at all, a:ln with a solid fill and an explicit
+    # width. Only the two with a line fill are bordered.
     with open(_test_path("image-borders.docx"), "rb") as fileobj:
         result = mammoth.convert_to_html(fileobj=fileobj)
         html = result.value
-        
-        # Count bordered images
-        bordered_count = html.count('class="fr-bordered"')
-        
-        # Verify that bordered images have the correct class
-        assert bordered_count > 0, "Should have at least one bordered image"
-        
-        # Count total images
-        total_images = html.count('<img')
-        
-        # Verify that some images don't have borders (non-bordered images)
-        non_bordered_count = total_images - bordered_count
-        assert non_bordered_count > 0, "Should have at least one non-bordered image"
-        
-        # Verify that non-bordered images don't have the fr-bordered class
-        assert html.count('class="fr-bordered"') == bordered_count, "Only bordered images should have fr-bordered class"
-        assert "class=\"fr-bordered\"" in html
+
+        assert_equal(4, html.count("<img"))
+        assert_equal(2, html.count('class="fr-bordered"'))
+
+        borders = [
+            'class="fr-bordered"' in image
+            for image in re.findall(r"<img[^>]*>", html)
+        ]
+        assert_equal([True, False, False, True], borders)
         
 def test_font_colors_are_preserved():
     with open(_test_path("font-colors.docx"), "rb") as fileobj:
