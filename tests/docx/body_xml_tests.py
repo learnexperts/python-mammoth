@@ -1600,6 +1600,83 @@ class ImageTests(object):
             assert_equal(self.IMAGE_BYTES, image_file.read())
 
 
+    def _read_image_border_class(self, shape_props_children, style_children=None):
+        pic_children = [xml_element("pic:spPr", {}, shape_props_children)]
+        if style_children is not None:
+            pic_children.append(xml_element("pic:style", {}, style_children))
+
+        drawing_element = _create_inline_image(
+            blip=_embedded_blip(self.IMAGE_RELATIONSHIP_ID),
+            pic_children=pic_children,
+        )
+
+        image = self._read_embedded_image(drawing_element)
+        return image.attributes.get("class")
+
+    def test_picture_without_line_element_has_no_border(self):
+        assert_equal(None, self._read_image_border_class([]))
+
+    def test_picture_with_line_with_no_fill_has_no_border(self):
+        # What Word writes on an ordinary, explicitly borderless picture.
+        assert_equal(None, self._read_image_border_class([
+            xml_element("a:ln", {}, [xml_element("a:noFill")]),
+        ]))
+
+    def test_picture_with_empty_line_element_has_no_border(self):
+        # What Google Docs exports write on every picture.
+        assert_equal(None, self._read_image_border_class([
+            xml_element("a:ln"),
+        ]))
+
+    def test_picture_with_solid_line_fill_has_border(self):
+        assert_equal("fr-bordered", self._read_image_border_class([
+            xml_element("a:ln", {"w": "76200"}, [
+                xml_element("a:solidFill", {}, [xml_element("a:srgbClr", {"val": "000000"})]),
+            ]),
+        ]))
+
+    def test_picture_with_solid_line_fill_and_no_width_has_border(self):
+        assert_equal("fr-bordered", self._read_image_border_class([
+            xml_element("a:ln", {}, [
+                xml_element("a:solidFill", {}, [xml_element("a:srgbClr", {"val": "000000"})]),
+            ]),
+        ]))
+
+    def test_picture_with_gradient_line_fill_has_border(self):
+        assert_equal("fr-bordered", self._read_image_border_class([
+            xml_element("a:ln", {}, [xml_element("a:gradFill")]),
+        ]))
+
+    def test_picture_with_zero_width_line_has_no_border(self):
+        assert_equal(None, self._read_image_border_class([
+            xml_element("a:ln", {"w": "0"}, [xml_element("a:solidFill")]),
+        ]))
+
+    def test_picture_with_empty_line_inherits_border_from_style_line_reference(self):
+        assert_equal("fr-bordered", self._read_image_border_class(
+            [xml_element("a:ln")],
+            style_children=[xml_element("a:lnRef", {"idx": "2"})],
+        ))
+
+    def test_picture_with_empty_line_and_zero_style_line_reference_has_no_border(self):
+        assert_equal(None, self._read_image_border_class(
+            [xml_element("a:ln")],
+            style_children=[xml_element("a:lnRef", {"idx": "0"})],
+        ))
+
+    def test_picture_with_empty_line_and_style_line_reference_without_fill_has_no_border(self):
+        assert_equal(None, self._read_image_border_class(
+            [xml_element("a:ln")],
+            style_children=[xml_element("a:lnRef", {"idx": "2"}, [xml_element("a:noFill")])],
+        ))
+
+    def test_explicit_line_fill_wins_over_style_line_reference(self):
+        assert_equal(None, self._read_image_border_class(
+            [xml_element("a:ln", {}, [xml_element("a:noFill")])],
+            style_children=[xml_element("a:lnRef", {"idx": "2"})],
+        ))
+
+
     def test_alt_text_title_is_used_if_alt_text_description_is_missing(self):
         drawing_element = _create_inline_image(
             blip=_embedded_blip(self.IMAGE_RELATIONSHIP_ID),
@@ -1922,9 +1999,9 @@ def _text_element(value):
     return xml_element("w:t", {}, [xml_text(value)])
 
 
-def _create_inline_image(blip, description=None, doc_pr_children=None, title=None, extent=None):
+def _create_inline_image(blip, description=None, doc_pr_children=None, title=None, extent=None, pic_children=None):
     return xml_element("w:drawing", {}, [
-        xml_element("wp:inline", {}, _create_image_elements(blip, description=description, doc_pr_children=doc_pr_children, title=title, extent=extent))
+        xml_element("wp:inline", {}, _create_image_elements(blip, description=description, doc_pr_children=doc_pr_children, title=title, extent=extent, pic_children=pic_children))
     ])
 
 
@@ -1934,7 +2011,7 @@ def _create_anchored_image(description, blip):
     ])
 
 
-def _create_image_elements(blip, description=None, doc_pr_children=None, title=None, extent=None):
+def _create_image_elements(blip, description=None, doc_pr_children=None, title=None, extent=None, pic_children=None):
     properties = {}
     if description is not None:
         properties["descr"] = description
@@ -1953,7 +2030,7 @@ def _create_image_elements(blip, description=None, doc_pr_children=None, title=N
                     xml_element("pic:blipFill", {}, [
                         blip
                     ])
-                ])
+                ] + list(pic_children or []))
             ])
         ])
     ]

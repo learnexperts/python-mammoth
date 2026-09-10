@@ -16,6 +16,9 @@ from .uris import replace_fragment, uri_to_zip_entry_name
 
 EMU_PER_PIXEL = 9525
 
+# a:ln children that mean an actual line is painted around the picture.
+_LINE_FILL_ELEMENTS = ("a:solidFill", "a:gradFill", "a:pattFill", "a:blipFill")
+
 if sys.version_info >= (3, ):
     unichr = chr
 
@@ -591,13 +594,58 @@ def _create_reader(numbering, content_types, relationships, styles, docx_file, f
 
         shape_props = pic.find_child_or_null("pic:spPr") if pic else None
 
-        has_border = (
-            shape_props is not None and
-            hasattr(shape_props, "children") and
-            any(getattr(child, "name", None) == "a:ln" for child in shape_props.children)
-        )
+        has_border = _has_border(shape_props, pic)
 
         return _read_blips(blips, alt_text, size, has_border, href)
+
+    def _has_border(shape_props, pic):
+        # In DrawingML the presence of a:ln says nothing about whether a line is
+        # actually drawn: Word writes <a:ln><a:noFill/></a:ln> on ordinary
+        # pictures and Google Docs exports write an empty <a:ln/> on every
+        # picture. A border is only drawn when the line has an explicit fill (or
+        # inherits one from the picture's style) and a non-zero width.
+        if shape_props is None:
+            return False
+
+        line = shape_props.find_child("a:ln")
+        if line is None:
+            return False
+
+        if _line_width_is_zero(line):
+            return False
+
+        for child in line.children:
+            name = getattr(child, "name", None)
+            if name == "a:noFill":
+                return False
+            if name in _LINE_FILL_ELEMENTS:
+                return True
+
+        # No fill child at all: the line fill comes from the style reference.
+        return _line_reference_has_fill(pic)
+
+    def _line_width_is_zero(line):
+        width = line.attributes.get("w")
+        if width is None:
+            return False
+        try:
+            return int(width) == 0
+        except ValueError:
+            return False
+
+    def _line_reference_has_fill(pic):
+        if pic is None:
+            return False
+
+        line_reference = pic.find_child_or_null("pic:style").find_child_or_null("a:lnRef")
+        index = line_reference.attributes.get("idx")
+        if index is None or index == "0":
+            return False
+
+        return not any(
+            getattr(child, "name", None) == "a:noFill"
+            for child in line_reference.children
+        )
 
     def _emu_to_pixel(emu):
         return int(round(float(emu) / EMU_PER_PIXEL))
